@@ -1,0 +1,35 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    name: Run Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Create .env from GitHub Secrets
+        run: |
+          cat > .env <<EOF
+          DEBUG=0
+          SECRET_KEY=${{ secrets.SECRET_KEY }}
+          POSTGRES_DB=${{ secrets.POSTGRES_DB }}
+          POSTGRES_USER=${{ secrets.POSTGRES_USER }}
+          POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }}
+          DB_HOST=db
+          DB_PORT=5432
+          ALLOWED_HOSTS=*
+          EOF
+      - name: Build Docker image
+        run: docker compose build
+      - name: Run tests
+        run: docker compose run --rm web python manage.py test
+      - name: Tear down
+        if: always()
+        run: docker compose down -v
