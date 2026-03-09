@@ -5,6 +5,7 @@ from django.urls import reverse
 
 from rest_framework import status
 from rest_framework.test import APIClient
+
 User = get_user_model()
 
 AUTHOR_LIST_LINK = reverse("authormodel-list")
@@ -14,9 +15,11 @@ def create_user(username, password):
     # for creating reusable user
     return User.objects.create(username=username, password=password)
 
+
 def create_author(user, name="Example", email="example@example.com"):
-    # creatign author
+    # creating author
     return AuthorModel.objects.create(user=user, name=name, email=email)
+
 
 class test_author_create(TestCase):
     def setUp(self):
@@ -42,7 +45,3 @@ class test_author_create(TestCase):
         self.assertEqual(res.status_code, status.HTTP_201_CREATED)
         author = AuthorModel.objects.get(id=res.data["id"])
         self.assertEqual(author.user, self.user)
-
-
-
-
