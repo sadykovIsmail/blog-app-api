@@ -11,6 +11,7 @@ User = get_user_model()
 def create_user(username, password):
     return User.objects.create(username=username, password=password)
 
+
 def create_author(user, name="Example", email="email@example.com"):
     return AuthorModel.objects.create(user=user, name=name, email=email)
 

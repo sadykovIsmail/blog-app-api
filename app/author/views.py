@@ -1,22 +1,28 @@
 from rest_framework import viewsets, status
 from .models import AuthorModel, BlogPostModel
 from .serializers import AuthorSerializer, BlogPostSerializer, PostImageSerializer
-from rest_framework.permissions import IsAuthenticated, BasePermission
+from rest_framework.permissions import BasePermission
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.parsers import MultiPartParser, FormParser
-from drf_spectacular.utils import extend_schema, OpenApiTypes
+from drf_spectacular.utils import extend_schema
+
+
 class IsOwner(BasePermission):
     def has_object_permission(self, request, view, obj):
         return obj.user == request.user
 
+
 class AuthorViews(viewsets.ModelViewSet):
     serializer_class = AuthorSerializer
     queryset = AuthorModel.objects.all()
+
     def get_queryset(self):
         return AuthorModel.objects.filter(user=self.request.user)
+
     def perform_create(self, serializer):
         serializer.save(user=self.request.user)
+
 
 class BlogPostViews(viewsets.ModelViewSet):
     serializer_class = BlogPostSerializer
@@ -61,4 +67,3 @@ class BlogPostViews(viewsets.ModelViewSet):
             return Response(serializer.data, status=status.HTTP_200_OK)
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
