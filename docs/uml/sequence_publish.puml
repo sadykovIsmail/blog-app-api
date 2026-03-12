@@ -1,0 +1,33 @@
+@startuml
+title Draft -> Scheduled -> Published (Key Workflow)
+
+actor Author as A
+participant "DRF API" as API
+participant "Post Service" as PostSvc
+database "PostgreSQL" as DB
+participant "Background Jobs" as Jobs
+participant "Notification Service" as Notif
+
+A -> API: POST /api/posts {title, content}\n(status=DRAFT)
+API -> PostSvc: create_post(user, payload)
+PostSvc -> DB: INSERT post(status=DRAFT)
+DB --> PostSvc: post_id
+PostSvc --> API: 201 Created
+API --> A: post
+
+A -> API: POST /api/posts/{id}/schedule {scheduled_for}
+API -> PostSvc: schedule_post(id, scheduled_for)
+PostSvc -> DB: UPDATE post(status=SCHEDULED, scheduled_for=...)
+PostSvc -> Jobs: enqueue publish_post(post_id, eta=scheduled_for)
+PostSvc --> API: 200 OK
+API --> A: scheduled
+
+== At scheduled time ==
+Jobs -> PostSvc: publish_post(post_id)
+PostSvc -> DB: UPDATE post(status=PUBLISHED, published_at=now())
+PostSvc -> Notif: notify_followers(post_id)
+Notif -> DB: INSERT notifications
+Notif --> PostSvc: ok
+
+@enduml
+
