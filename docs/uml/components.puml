@@ -1,0 +1,54 @@
+@startuml
+title Advanced Blog Platform - Components
+
+skinparam componentStyle rectangle
+
+actor "Web/Mobile Client" as client
+actor "Moderator" as mod
+
+component "DRF API" as api
+component "Auth (JWT)" as auth
+component "Public Feed" as feed
+component "Social Graph" as social
+component "Comments & Reactions" as comments
+component "Trust Layer\n(Citations/Claims/Reviews)" as trust
+component "Moderation" as moderation
+component "Notification Service" as notify
+component "Background Jobs\n(Celery)" as jobs
+
+database "PostgreSQL" as db
+queue "Redis (broker/cache)" as redis
+cloud "Object Storage\n(S3/MinIO)" as blob
+component "Search Index\n(Postgres FTS first)" as search
+
+client --> api
+mod --> api
+
+api --> auth
+api --> feed
+api --> social
+api --> comments
+api --> trust
+api --> moderation
+
+auth --> db
+feed --> db
+social --> db
+comments --> db
+trust --> db
+moderation --> db
+notify --> db
+
+api --> search
+search --> db
+
+api --> blob : uploads/media
+
+trust --> jobs : snapshot fetch
+notify --> jobs : email/push
+jobs --> db
+jobs --> redis
+api --> redis : cache/throttle
+
+@enduml
+

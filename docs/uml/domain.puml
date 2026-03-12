@@ -1,0 +1,181 @@
+@startuml
+title Advanced Blog Platform - Domain Model (High Level)
+
+skinparam classAttributeIconSize 0
+
+class User {
+  +id: UUID
+  +username: string
+  +email: string
+  +created_at: datetime
+}
+
+class Profile {
+  +id: UUID
+  +handle: string
+  +display_name: string
+  +bio: text
+  +avatar_url: string?
+  +created_at: datetime
+}
+
+class Post {
+  +id: UUID
+  +title: string
+  +slug: string
+  +content: text
+  +status: PostStatus
+  +visibility: Visibility
+  +published_at: datetime?
+  +scheduled_for: datetime?
+  +created_at: datetime
+  +updated_at: datetime
+}
+
+enum PostStatus {
+  DRAFT
+  SCHEDULED
+  PUBLISHED
+  ARCHIVED
+}
+
+enum Visibility {
+  PUBLIC
+  UNLISTED
+}
+
+class Tag {
+  +id: UUID
+  +name: string
+  +slug: string
+}
+
+class PostVersion {
+  +id: UUID
+  +reason: string?
+  +content_snapshot: text
+  +created_at: datetime
+}
+
+class Citation {
+  +id: UUID
+  +url: string
+  +title: string?
+  +publisher: string?
+  +published_at: date?
+  +accessed_at: datetime
+}
+
+class SourceSnapshot {
+  +id: UUID
+  +url: string
+  +canonical_url: string?
+  +fetched_at: datetime
+  +http_status: int
+  +content_hash: string
+  +extracted_text: text?
+}
+
+class Claim {
+  +id: UUID
+  +text: string
+  +start_offset: int?
+  +end_offset: int?
+}
+
+class Review {
+  +id: UUID
+  +rating: int?
+  +notes: text?
+  +status: ReviewStatus
+  +created_at: datetime
+}
+
+enum ReviewStatus {
+  REQUESTED
+  SUBMITTED
+  WITHDRAWN
+}
+
+class Comment {
+  +id: UUID
+  +content: text
+  +status: CommentStatus
+  +created_at: datetime
+}
+
+enum CommentStatus {
+  VISIBLE
+  HIDDEN
+  DELETED
+}
+
+class Reaction {
+  +id: UUID
+  +type: string
+  +created_at: datetime
+}
+
+class Follow {
+  +id: UUID
+  +created_at: datetime
+}
+
+class Notification {
+  +id: UUID
+  +type: string
+  +payload_json: json
+  +created_at: datetime
+  +read_at: datetime?
+}
+
+class Report {
+  +id: UUID
+  +reason: string
+  +created_at: datetime
+}
+
+class ModerationAction {
+  +id: UUID
+  +action: string
+  +notes: string?
+  +created_at: datetime
+}
+
+User "1" -- "1" Profile
+User "1" -- "0..*" Post : authors
+Post "1" -- "0..*" PostVersion
+Post "0..*" -- "0..*" Tag
+
+Post "1" -- "0..*" Citation
+Citation "0..1" -- "1" SourceSnapshot
+
+Post "1" -- "0..*" Claim
+Claim "0..*" -- "0..*" Citation : supports
+
+Post "1" -- "0..*" Review
+User "1" -- "0..*" Review : reviewer
+
+Post "1" -- "0..*" Comment
+Comment "0..1" -- "0..*" Comment : replies
+User "1" -- "0..*" Comment : author
+
+User "1" -- "0..*" Reaction : actor
+Post "0..1" -- "0..*" Reaction
+Comment "0..1" -- "0..*" Reaction
+
+User "1" -- "0..*" Follow : follower
+User "1" -- "0..*" Follow : following
+
+User "1" -- "0..*" Notification : recipient
+User "0..1" -- "0..*" Notification : actor
+
+User "1" -- "0..*" Report : reporter
+Post "0..1" -- "0..*" Report
+Comment "0..1" -- "0..*" Report
+
+User "1" -- "0..*" ModerationAction : moderator
+Report "0..1" -- "0..*" ModerationAction
+
+@enduml
+

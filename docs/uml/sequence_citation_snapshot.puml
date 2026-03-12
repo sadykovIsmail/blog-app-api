@@ -1,0 +1,26 @@
+@startuml
+title Add Citation + Snapshot (Trust Layer v1)
+
+actor Author as A
+participant "DRF API" as API
+participant "Trust Layer" as Trust
+database "PostgreSQL" as DB
+participant "Background Jobs" as Jobs
+
+A -> API: POST /api/posts/{id}/citations {url, title?}
+API -> Trust: add_citation(post_id, url, metadata)
+Trust -> DB: INSERT citation(post_id, url, accessed_at=now())
+DB --> Trust: citation_id
+Trust -> Jobs: enqueue snapshot_fetch(citation_id)
+Trust --> API: 201 Created (citation)
+API --> A: citation
+
+== Async snapshot ==
+Jobs -> Trust: snapshot_fetch(citation_id)
+Trust -> DB: SELECT citation.url
+Trust -> Trust: fetch url, extract metadata/text\n(hash content)
+Trust -> DB: INSERT source_snapshot(...)\nUPDATE citation.snapshot_ref
+Trust --> Jobs: ok
+
+@enduml
+
