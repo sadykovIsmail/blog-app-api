@@ -35,8 +35,8 @@ class test_author_create(TestCase):
         res = self.client.get(AUTHOR_LIST_LINK)
 
         self.assertEqual(res.status_code, status.HTTP_200_OK)
-        self.assertEqual(len(res.data), 1)
-        self.assertEqual(res.data[0]["name"], "MyAuthor")
+        self.assertEqual(len(res.data['results']), 1)
+        self.assertEqual(res.data['results'][0]["name"], "MyAuthor")
 
     def test_users_see_own_authors(self):
         payload = {"name": "New User", "email": "newAuthor@example.com"}

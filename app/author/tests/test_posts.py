@@ -73,8 +73,8 @@ class test_post_create(TestCase):
 
         res = self.client.get(BLOG_LIST_LINK)
         self.assertEqual(res.status_code, status.HTTP_200_OK)
-        self.assertEqual(len(res.data), 1)
-        self.assertEqual(res.data[0]["title"], "My Post")
+        self.assertEqual(len(res.data['results']), 1)
+        self.assertEqual(res.data['results'][0]["title"], "My Post")
 
 
 class test_post_isolation(TestCase):
@@ -97,14 +97,14 @@ class test_post_isolation(TestCase):
     def test_user1_sees_only_own_posts(self):
         res = self.client1.get(BLOG_LIST_LINK)
         self.assertEqual(res.status_code, status.HTTP_200_OK)
-        self.assertEqual(len(res.data), 1)
-        self.assertEqual(res.data[0]["title"], "User1 Post")
+        self.assertEqual(len(res.data['results']), 1)
+        self.assertEqual(res.data['results'][0]["title"], "User1 Post")
 
     def test_user2_sees_only_own_posts(self):
         res = self.client2.get(BLOG_LIST_LINK)
         self.assertEqual(res.status_code, status.HTTP_200_OK)
-        self.assertEqual(len(res.data), 1)
-        self.assertEqual(res.data[0]["title"], "User2 Post")
+        self.assertEqual(len(res.data['results']), 1)
+        self.assertEqual(res.data['results'][0]["title"], "User2 Post")
 
     def test_user1_cannot_delete_user2_post(self):
         # post2 belongs to user2 — user1 should get 404 (invisible, not just forbidden)
