@@ -52,14 +52,14 @@ class AuthorSerializer(serializers.ModelSerializer):
 
 
 class BlogPostSerializer(serializers.ModelSerializer):
-    author_name = serializers.CharField(
-        source='author.name',
-        read_only=True,
-    )
+    author_name = serializers.CharField(source='author.name', read_only=True)
 
     class Meta:
         model = BlogPostModel
-        fields = "__all__"
+        fields = [
+            'id', 'title', 'content', 'author', 'author_name',
+            'status', 'created_at', 'updated_at', 'image', 'user',
+        ]
         read_only_fields = ['id', 'created_at', 'updated_at', 'user']
 
 
