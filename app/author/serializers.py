@@ -1,5 +1,5 @@
 from django.contrib.auth import get_user_model
-from .models import AuthorModel, BlogPostModel, Comment, Reaction
+from .models import AuthorModel, BlogPostModel, Comment, Reaction, Notification
 from rest_framework import serializers
 
 User = get_user_model()
@@ -99,6 +99,13 @@ class CommentSerializer(serializers.ModelSerializer):
         model = Comment
         fields = ['id', 'post', 'user', 'parent', 'body', 'created_at', 'updated_at']
         read_only_fields = ['id', 'user', 'post', 'created_at', 'updated_at']
+
+
+class NotificationSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Notification
+        fields = ['id', 'notification_type', 'actor', 'post', 'comment', 'is_read', 'created_at']
+        read_only_fields = fields
 
 
 class PostImageSerializer(serializers.ModelSerializer):

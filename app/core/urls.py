@@ -27,7 +27,7 @@ from author.views import (
     RegisterView, ProfileView, PublicPostListView, PublicProfilePostsView,
     FollowView, UnfollowView, UserPublicProfileView,
     PostCommentListCreateView, CommentDetailView,
-    PostReactView, CommentReactView,
+    PostReactView, CommentReactView, NotificationListView,
 )
 
 urlpatterns = [
@@ -48,4 +48,5 @@ urlpatterns = [
     path('api/comments/<int:pk>/', CommentDetailView.as_view(), name='comment-detail'),
     path('api/posts/<int:pk>/react/', PostReactView.as_view(), name='post-react'),
     path('api/comments/<int:pk>/react/', CommentReactView.as_view(), name='comment-react'),
+    path('api/notifications/', NotificationListView.as_view(), name='notifications'),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
