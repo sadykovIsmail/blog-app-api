@@ -27,6 +27,7 @@ from author.views import (
     RegisterView, ProfileView, PublicPostListView, PublicProfilePostsView,
     FollowView, UnfollowView, UserPublicProfileView,
     PostCommentListCreateView, CommentDetailView,
+    PostReactView, CommentReactView,
 )
 
 urlpatterns = [
@@ -45,4 +46,6 @@ urlpatterns = [
     path('api/users/<int:pk>/unfollow/', UnfollowView.as_view(), name='unfollow'),
     path('api/posts/<int:post_id>/comments/', PostCommentListCreateView.as_view(), name='post-comments'),
     path('api/comments/<int:pk>/', CommentDetailView.as_view(), name='comment-detail'),
+    path('api/posts/<int:pk>/react/', PostReactView.as_view(), name='post-react'),
+    path('api/comments/<int:pk>/react/', CommentReactView.as_view(), name='comment-react'),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

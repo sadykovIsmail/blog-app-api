@@ -19,6 +19,28 @@ class Follow(models.Model):
         return f"{self.follower} -> {self.following}"
 
 
+class Reaction(models.Model):
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='reactions',
+    )
+    post = models.ForeignKey(
+        'BlogPostModel', null=True, blank=True,
+        on_delete=models.CASCADE, related_name='reactions',
+    )
+    comment = models.ForeignKey(
+        'Comment', null=True, blank=True,
+        on_delete=models.CASCADE, related_name='reactions',
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = [('user', 'post'), ('user', 'comment')]
+
+    def __str__(self):
+        target = f"post:{self.post_id}" if self.post_id else f"comment:{self.comment_id}"
+        return f"{self.user} reacted to {target}"
+
+
 class Comment(models.Model):
     post = models.ForeignKey(
         'BlogPostModel', on_delete=models.CASCADE, related_name='comments',
