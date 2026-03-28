@@ -1,12 +1,12 @@
 from rest_framework import viewsets, status, generics, filters
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.views import APIView
-from .models import AuthorModel, BlogPostModel, Follow, Comment, Reaction, Notification
+from .models import AuthorModel, BlogPostModel, Follow, Comment, Reaction, Notification, Citation
 from .serializers import (
     AuthorSerializer, BlogPostSerializer, PublicPostSerializer,
     PostImageSerializer, UserRegistrationSerializer,
     UserProfileSerializer, UserPublicProfileSerializer,
-    CommentSerializer, NotificationSerializer,
+    CommentSerializer, NotificationSerializer, CitationSerializer,
 )
 from rest_framework.permissions import BasePermission, AllowAny, IsAuthenticated
 from rest_framework.decorators import action
@@ -191,6 +191,46 @@ class NotificationListView(generics.ListAPIView):
         response = self.get_paginated_response(serializer.data)
         response.data['unread_count'] = unread_count
         return response
+
+
+class IsPostOwner(BasePermission):
+    def has_permission(self, request, view):
+        from django.shortcuts import get_object_or_404
+        post = get_object_or_404(BlogPostModel, pk=view.kwargs.get('post_id'))
+        return post.user == request.user
+
+
+class CitationListCreateView(generics.ListCreateAPIView):
+    serializer_class = CitationSerializer
+
+    def get_permissions(self):
+        if self.request.method == 'GET':
+            return [IsAuthenticated()]
+        return [IsAuthenticated(), IsPostOwner()]
+
+    def get_queryset(self):
+        return Citation.objects.filter(post_id=self.kwargs['post_id'])
+
+    def perform_create(self, serializer):
+        from django.shortcuts import get_object_or_404
+        post = get_object_or_404(BlogPostModel, pk=self.kwargs['post_id'])
+        serializer.save(post=post)
+
+
+class CitationDetailView(generics.RetrieveUpdateDestroyAPIView):
+    serializer_class = CitationSerializer
+    queryset = Citation.objects.all()
+    http_method_names = ['get', 'patch', 'delete', 'head', 'options']
+
+    def get_permissions(self):
+        if self.request.method in ('PATCH', 'DELETE'):
+            return [IsAuthenticated(), IsCitationOwner()]
+        return [IsAuthenticated()]
+
+
+class IsCitationOwner(BasePermission):
+    def has_object_permission(self, request, view, obj):
+        return obj.post.user == request.user
 
 
 class IsCommentOwner(BasePermission):
