@@ -10,7 +10,8 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ['id', 'username', 'email', 'password']
+        fields = ['id', 'username', 'email', 'password', 'handle']
+        read_only_fields = ['id', 'handle']
         extra_kwargs = {'email': {'required': True}}
 
     def validate_email(self, value):
@@ -20,6 +21,21 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         return User.objects.create_user(**validated_data)
+
+
+class UserProfileSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ['id', 'username', 'email', 'handle']
+        read_only_fields = ['id', 'username', 'email']
+
+    def validate_handle(self, value):
+        qs = User.objects.filter(handle=value)
+        if self.instance:
+            qs = qs.exclude(pk=self.instance.pk)
+        if qs.exists():
+            raise serializers.ValidationError("This handle is already taken.")
+        return value
 
 
 class AuthorSerializer(serializers.ModelSerializer):
