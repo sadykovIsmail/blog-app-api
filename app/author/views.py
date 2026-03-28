@@ -1,9 +1,11 @@
 from rest_framework import viewsets, status, generics, filters
 from rest_framework.pagination import PageNumberPagination
-from .models import AuthorModel, BlogPostModel
+from rest_framework.views import APIView
+from .models import AuthorModel, BlogPostModel, Follow
 from .serializers import (
     AuthorSerializer, BlogPostSerializer, PublicPostSerializer,
-    PostImageSerializer, UserRegistrationSerializer, UserProfileSerializer,
+    PostImageSerializer, UserRegistrationSerializer,
+    UserProfileSerializer, UserPublicProfileSerializer,
 )
 from rest_framework.permissions import BasePermission, AllowAny, IsAuthenticated
 from rest_framework.decorators import action
@@ -63,6 +65,47 @@ class PublicProfilePostsView(generics.ListAPIView):
             status=BlogPostModel.Status.PUBLISHED,
             visibility=BlogPostModel.Visibility.PUBLIC,
         ).select_related('author', 'user')
+
+
+class UserPublicProfileView(generics.RetrieveAPIView):
+    serializer_class = UserPublicProfileSerializer
+    permission_classes = [AllowAny]
+
+    def get_object(self):
+        from django.contrib.auth import get_user_model
+        from django.shortcuts import get_object_or_404
+        User = get_user_model()
+        return get_object_or_404(User, pk=self.kwargs['pk'])
+
+
+class FollowView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, pk):
+        from django.contrib.auth import get_user_model
+        from django.shortcuts import get_object_or_404
+        User = get_user_model()
+        target = get_object_or_404(User, pk=pk)
+        if target == request.user:
+            return Response({"detail": "Cannot follow yourself."}, status=status.HTTP_400_BAD_REQUEST)
+        _, created = Follow.objects.get_or_create(follower=request.user, following=target)
+        if not created:
+            return Response({"detail": "Already following."}, status=status.HTTP_400_BAD_REQUEST)
+        return Response({"detail": "Followed."}, status=status.HTTP_201_CREATED)
+
+
+class UnfollowView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def delete(self, request, pk):
+        from django.contrib.auth import get_user_model
+        from django.shortcuts import get_object_or_404
+        User = get_user_model()
+        target = get_object_or_404(User, pk=pk)
+        deleted, _ = Follow.objects.filter(follower=request.user, following=target).delete()
+        if not deleted:
+            return Response({"detail": "Not following."}, status=status.HTTP_400_BAD_REQUEST)
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class IsOwner(BasePermission):
