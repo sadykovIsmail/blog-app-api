@@ -1,5 +1,5 @@
 from django.contrib.auth import get_user_model
-from .models import AuthorModel, BlogPostModel
+from .models import AuthorModel, BlogPostModel, Comment
 from rest_framework import serializers
 
 User = get_user_model()
@@ -89,6 +89,15 @@ class BlogPostSerializer(serializers.ModelSerializer):
             'created_at', 'updated_at', 'image', 'user',
         ]
         read_only_fields = ['id', 'slug', 'published_at', 'created_at', 'updated_at', 'user']
+
+
+class CommentSerializer(serializers.ModelSerializer):
+    user = serializers.ReadOnlyField(source='user.username')
+
+    class Meta:
+        model = Comment
+        fields = ['id', 'post', 'user', 'parent', 'body', 'created_at', 'updated_at']
+        read_only_fields = ['id', 'user', 'post', 'created_at', 'updated_at']
 
 
 class PostImageSerializer(serializers.ModelSerializer):

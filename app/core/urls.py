@@ -26,6 +26,7 @@ from rest_framework_simplejwt.views import (
 from author.views import (
     RegisterView, ProfileView, PublicPostListView, PublicProfilePostsView,
     FollowView, UnfollowView, UserPublicProfileView,
+    PostCommentListCreateView, CommentDetailView,
 )
 
 urlpatterns = [
@@ -42,4 +43,6 @@ urlpatterns = [
     path('api/users/<int:pk>/', UserPublicProfileView.as_view(), name='profile-detail'),
     path('api/users/<int:pk>/follow/', FollowView.as_view(), name='follow'),
     path('api/users/<int:pk>/unfollow/', UnfollowView.as_view(), name='unfollow'),
+    path('api/posts/<int:post_id>/comments/', PostCommentListCreateView.as_view(), name='post-comments'),
+    path('api/comments/<int:pk>/', CommentDetailView.as_view(), name='comment-detail'),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
