@@ -29,10 +29,19 @@ class BlogPostModel(models.Model):
         settings.AUTH_USER_MODEL, on_delete=models.CASCADE,
         related_name="posts",
     )
+    class Visibility(models.TextChoices):
+        PUBLIC = "PUBLIC", "Public"
+        UNLISTED = "UNLISTED", "Unlisted"
+
     status = models.CharField(
         max_length=10,
         choices=Status.choices,
         default=Status.DRAFT,
+    )
+    visibility = models.CharField(
+        max_length=10,
+        choices=Visibility.choices,
+        default=Visibility.PUBLIC,
     )
 
     def __str__(self):
