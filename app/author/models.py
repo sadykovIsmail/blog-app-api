@@ -43,6 +43,8 @@ class Notification(models.Model):
         COMMENT = "comment", "Comment"
         REPLY = "reply", "Reply"
         NEW_POST = "new_post", "New Post"
+        CITATION_DEAD = "citation_dead", "Citation Dead"
+        CITATION_DRIFT = "citation_drift", "Citation Drift"
 
     recipient = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='notifications',
