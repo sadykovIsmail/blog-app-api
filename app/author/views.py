@@ -1,12 +1,13 @@
 from rest_framework import viewsets, status, generics, filters
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.views import APIView
-from .models import AuthorModel, BlogPostModel, Follow, Comment, Reaction, Notification, Citation
+from .models import AuthorModel, BlogPostModel, Follow, Comment, Reaction, Notification, Citation, PostVersion
 from .serializers import (
     AuthorSerializer, BlogPostSerializer, PublicPostSerializer,
     PostImageSerializer, UserRegistrationSerializer,
     UserProfileSerializer, UserPublicProfileSerializer,
     CommentSerializer, NotificationSerializer, CitationSerializer,
+    PostVersionSerializer,
 )
 from rest_framework.permissions import BasePermission, AllowAny, IsAuthenticated
 from rest_framework.decorators import action
@@ -277,8 +278,20 @@ class BlogPostViews(viewsets.ModelViewSet):
         return BlogPostModel.objects.filter(user=self.request.user)
 
     def perform_create(self, serializer):
-        # Automatically assign the logged-in user
         serializer.save(user=self.request.user)
+
+    def perform_update(self, serializer):
+        post = self.get_object()
+        reason = serializer.validated_data.pop('reason_for_change', '')
+        next_version = post.versions.count() + 1
+        PostVersion.objects.create(
+            post=post,
+            version_number=next_version,
+            title_snapshot=post.title,
+            content_snapshot=post.content,
+            reason_for_change=reason,
+        )
+        serializer.save()
 
     def get_serializer_class(self):
         if self.action == "upload_image":

@@ -19,6 +19,24 @@ class Follow(models.Model):
         return f"{self.follower} -> {self.following}"
 
 
+class PostVersion(models.Model):
+    post = models.ForeignKey(
+        'BlogPostModel', on_delete=models.CASCADE, related_name='versions',
+    )
+    version_number = models.PositiveIntegerField()
+    title_snapshot = models.CharField(max_length=255)
+    content_snapshot = models.TextField()
+    reason_for_change = models.TextField(blank=True)
+    changed_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['version_number']
+        unique_together = ('post', 'version_number')
+
+    def __str__(self):
+        return f"{self.post} v{self.version_number}"
+
+
 class Citation(models.Model):
     post = models.ForeignKey(
         'BlogPostModel', on_delete=models.CASCADE, related_name='citations',
