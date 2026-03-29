@@ -23,7 +23,7 @@ from rest_framework_simplejwt.views import (
     TokenObtainPairView,
     TokenRefreshView
 )
-from author.views import RegisterView, ProfileView, PublicPostListView
+from author.views import RegisterView, ProfileView, PublicPostListView, PublicProfilePostsView
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -35,4 +35,5 @@ urlpatterns = [
     path('api/auth/register/', RegisterView.as_view(), name='register'),
     path('api/auth/profile/', ProfileView.as_view(), name='profile'),
     path('api/public/posts/', PublicPostListView.as_view(), name='public-post-list'),
+    path('api/public/profiles/<str:handle>/posts/', PublicProfilePostsView.as_view(), name='public-profile-posts'),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

@@ -48,6 +48,23 @@ class PublicPostListView(generics.ListAPIView):
         ).select_related('author', 'user')
 
 
+class PublicProfilePostsView(generics.ListAPIView):
+    serializer_class = PublicPostSerializer
+    permission_classes = [AllowAny]
+    pagination_class = StandardPagination
+
+    def get_queryset(self):
+        from django.contrib.auth import get_user_model
+        from django.shortcuts import get_object_or_404
+        User = get_user_model()
+        user = get_object_or_404(User, handle=self.kwargs['handle'])
+        return BlogPostModel.objects.filter(
+            user=user,
+            status=BlogPostModel.Status.PUBLISHED,
+            visibility=BlogPostModel.Visibility.PUBLIC,
+        ).select_related('author', 'user')
+
+
 class IsOwner(BasePermission):
     def has_object_permission(self, request, view, obj):
         return obj.user == request.user
