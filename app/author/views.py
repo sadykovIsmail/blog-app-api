@@ -1,11 +1,19 @@
-from rest_framework import viewsets, status
+from rest_framework import viewsets, status, generics
 from .models import AuthorModel, BlogPostModel
-from .serializers import AuthorSerializer, BlogPostSerializer, PostImageSerializer
-from rest_framework.permissions import BasePermission
+from .serializers import (
+    AuthorSerializer, BlogPostSerializer,
+    PostImageSerializer, UserRegistrationSerializer,
+)
+from rest_framework.permissions import BasePermission, AllowAny
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.parsers import MultiPartParser, FormParser
 from drf_spectacular.utils import extend_schema
+
+
+class RegisterView(generics.CreateAPIView):
+    serializer_class = UserRegistrationSerializer
+    permission_classes = [AllowAny]
 
 
 class IsOwner(BasePermission):
