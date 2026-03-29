@@ -55,7 +55,21 @@ class PublicPostListView(generics.ListAPIView):
         return BlogPostModel.objects.filter(
             status=BlogPostModel.Status.PUBLISHED,
             visibility=BlogPostModel.Visibility.PUBLIC,
-        ).select_related('author', 'user')
+        ).select_related('author', 'user').prefetch_related('reactions')
+
+    def list(self, request, *args, **kwargs):
+        from django.core.cache import cache
+        from django.conf import settings as dj_settings
+        if not request.query_params:
+            cache_key = "public_feed_page_1"
+            cached = cache.get(cache_key)
+            if cached is not None:
+                return Response(cached)
+            response = super().list(request, *args, **kwargs)
+            ttl = getattr(dj_settings, 'PUBLIC_FEED_CACHE_TTL', 30)
+            cache.set(cache_key, response.data, ttl)
+            return response
+        return super().list(request, *args, **kwargs)
 
 
 class PublicProfilePostsView(generics.ListAPIView):
