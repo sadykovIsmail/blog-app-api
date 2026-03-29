@@ -19,6 +19,24 @@ class Follow(models.Model):
         return f"{self.follower} -> {self.following}"
 
 
+class Citation(models.Model):
+    post = models.ForeignKey(
+        'BlogPostModel', on_delete=models.CASCADE, related_name='citations',
+    )
+    url = models.URLField(max_length=2000)
+    title = models.CharField(max_length=500, blank=True)
+    publisher = models.CharField(max_length=255, blank=True)
+    published_at = models.DateField(null=True, blank=True)
+    accessed_at = models.DateField(auto_now_add=True)
+    http_status = models.IntegerField(null=True, blank=True)
+    checked_at = models.DateTimeField(null=True, blank=True)
+    canonical_url = models.URLField(max_length=2000, blank=True)
+    content_hash = models.CharField(max_length=64, blank=True)
+
+    def __str__(self):
+        return f"{self.url} ({self.post})"
+
+
 class Notification(models.Model):
     class Type(models.TextChoices):
         FOLLOW = "follow", "Follow"

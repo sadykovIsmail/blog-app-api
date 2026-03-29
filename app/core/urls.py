@@ -28,6 +28,7 @@ from author.views import (
     FollowView, UnfollowView, UserPublicProfileView,
     PostCommentListCreateView, CommentDetailView,
     PostReactView, CommentReactView, NotificationListView,
+    CitationListCreateView, CitationDetailView,
 )
 
 urlpatterns = [
@@ -49,4 +50,6 @@ urlpatterns = [
     path('api/posts/<int:pk>/react/', PostReactView.as_view(), name='post-react'),
     path('api/comments/<int:pk>/react/', CommentReactView.as_view(), name='comment-react'),
     path('api/notifications/', NotificationListView.as_view(), name='notifications'),
+    path('api/posts/<int:post_id>/citations/', CitationListCreateView.as_view(), name='post-citations'),
+    path('api/citations/<int:pk>/', CitationDetailView.as_view(), name='citation-detail'),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
