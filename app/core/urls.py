@@ -28,7 +28,7 @@ from author.views import (
     FollowView, UnfollowView, UserPublicProfileView,
     PostCommentListCreateView, CommentDetailView,
     PostReactView, CommentReactView, NotificationListView,
-    CitationListCreateView, CitationDetailView,
+    CitationListCreateView, CitationDetailView, EvidencePanelView,
 )
 
 urlpatterns = [
@@ -52,4 +52,5 @@ urlpatterns = [
     path('api/notifications/', NotificationListView.as_view(), name='notifications'),
     path('api/posts/<int:post_id>/citations/', CitationListCreateView.as_view(), name='post-citations'),
     path('api/citations/<int:pk>/', CitationDetailView.as_view(), name='citation-detail'),
+    path('api/posts/<int:pk>/evidence/', EvidencePanelView.as_view(), name='post-evidence'),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

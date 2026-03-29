@@ -193,6 +193,20 @@ class NotificationListView(generics.ListAPIView):
         return response
 
 
+class EvidencePanelView(APIView):
+    permission_classes = [AllowAny]
+
+    def get(self, request, pk):
+        from django.shortcuts import get_object_or_404
+        post = get_object_or_404(BlogPostModel, pk=pk)
+        citations = Citation.objects.filter(post=post)
+        serializer = CitationSerializer(citations, many=True)
+        return Response({
+            "post_id": post.id,
+            "citations": serializer.data,
+        })
+
+
 class IsPostOwner(BasePermission):
     def has_permission(self, request, view):
         from django.shortcuts import get_object_or_404
