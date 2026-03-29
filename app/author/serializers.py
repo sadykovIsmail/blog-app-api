@@ -93,6 +93,22 @@ class BlogPostSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ['id', 'slug', 'published_at', 'created_at', 'updated_at', 'user']
 
+    def validate(self, data):
+        import re
+        status = data.get('status', getattr(self.instance, 'status', None))
+        content = data.get('content', getattr(self.instance, 'content', ''))
+        if status == BlogPostModel.Status.PUBLISHED:
+            if not content or not content.strip():
+                raise serializers.ValidationError(
+                    {"content": "Content cannot be empty when publishing."}
+                )
+            links = re.findall(r'https?://\S+', content)
+            if len(links) > 20:
+                raise serializers.ValidationError(
+                    {"content": "Published posts may not contain more than 20 external links."}
+                )
+        return data
+
 
 class PostReviewSerializer(serializers.ModelSerializer):
     reviewer = serializers.ReadOnlyField(source='reviewer.username')
