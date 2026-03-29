@@ -2,9 +2,9 @@ from rest_framework import viewsets, status, generics
 from .models import AuthorModel, BlogPostModel
 from .serializers import (
     AuthorSerializer, BlogPostSerializer,
-    PostImageSerializer, UserRegistrationSerializer,
+    PostImageSerializer, UserRegistrationSerializer, UserProfileSerializer,
 )
-from rest_framework.permissions import BasePermission, AllowAny
+from rest_framework.permissions import BasePermission, AllowAny, IsAuthenticated
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.parsers import MultiPartParser, FormParser
@@ -14,6 +14,15 @@ from drf_spectacular.utils import extend_schema
 class RegisterView(generics.CreateAPIView):
     serializer_class = UserRegistrationSerializer
     permission_classes = [AllowAny]
+
+
+class ProfileView(generics.RetrieveUpdateAPIView):
+    serializer_class = UserProfileSerializer
+    permission_classes = [IsAuthenticated]
+    http_method_names = ['get', 'patch', 'head', 'options']
+
+    def get_object(self):
+        return self.request.user
 
 
 class IsOwner(BasePermission):
