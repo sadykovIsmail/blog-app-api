@@ -1,13 +1,16 @@
 from rest_framework import viewsets, status, generics, filters
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.views import APIView
-from .models import AuthorModel, BlogPostModel, Follow, Comment, Reaction, Notification, Citation, PostVersion
+from .models import (
+    AuthorModel, BlogPostModel, Follow, Comment,
+    Reaction, Notification, Citation, PostVersion, PostReview,
+)
 from .serializers import (
     AuthorSerializer, BlogPostSerializer, PublicPostSerializer,
     PostImageSerializer, UserRegistrationSerializer,
     UserProfileSerializer, UserPublicProfileSerializer,
     CommentSerializer, NotificationSerializer, CitationSerializer,
-    PostVersionSerializer,
+    PostVersionSerializer, PostReviewSerializer,
 )
 from rest_framework.permissions import BasePermission, AllowAny, IsAuthenticated
 from rest_framework.decorators import action
@@ -192,6 +195,22 @@ class NotificationListView(generics.ListAPIView):
         response = self.get_paginated_response(serializer.data)
         response.data['unread_count'] = unread_count
         return response
+
+
+class PostReviewListCreateView(generics.ListCreateAPIView):
+    serializer_class = PostReviewSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        return PostReview.objects.filter(post_id=self.kwargs['post_id'])
+
+    def perform_create(self, serializer):
+        from django.shortcuts import get_object_or_404
+        post = get_object_or_404(BlogPostModel, pk=self.kwargs['post_id'])
+        if post.user == self.request.user:
+            from rest_framework.exceptions import ValidationError
+            raise ValidationError("You cannot review your own post.")
+        serializer.save(reviewer=self.request.user, post=post)
 
 
 class PostChangelogView(generics.ListAPIView):

@@ -19,6 +19,24 @@ class Follow(models.Model):
         return f"{self.follower} -> {self.following}"
 
 
+class PostReview(models.Model):
+    post = models.ForeignKey(
+        'BlogPostModel', on_delete=models.CASCADE, related_name='reviews',
+    )
+    reviewer = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='reviews_given',
+    )
+    rating = models.PositiveSmallIntegerField()
+    notes = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('post', 'reviewer')
+
+    def __str__(self):
+        return f"Review by {self.reviewer} on {self.post} ({self.rating}/5)"
+
+
 class PostVersion(models.Model):
     post = models.ForeignKey(
         'BlogPostModel', on_delete=models.CASCADE, related_name='versions',
