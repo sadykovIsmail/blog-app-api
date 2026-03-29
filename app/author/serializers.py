@@ -58,9 +58,11 @@ class BlogPostSerializer(serializers.ModelSerializer):
         model = BlogPostModel
         fields = [
             'id', 'title', 'content', 'author', 'author_name',
-            'status', 'visibility', 'created_at', 'updated_at', 'image', 'user',
+            'status', 'visibility', 'slug',
+            'published_at', 'scheduled_for',
+            'created_at', 'updated_at', 'image', 'user',
         ]
-        read_only_fields = ['id', 'created_at', 'updated_at', 'user']
+        read_only_fields = ['id', 'slug', 'published_at', 'created_at', 'updated_at', 'user']
 
 
 class PostImageSerializer(serializers.ModelSerializer):
