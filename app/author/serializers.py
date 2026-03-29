@@ -1,5 +1,5 @@
 from django.contrib.auth import get_user_model
-from .models import AuthorModel, BlogPostModel, Comment
+from .models import AuthorModel, BlogPostModel, Comment, Reaction
 from rest_framework import serializers
 
 User = get_user_model()
@@ -55,12 +55,13 @@ class UserPublicProfileSerializer(serializers.ModelSerializer):
 
 class PublicPostSerializer(serializers.ModelSerializer):
     author_handle = serializers.CharField(source='user.handle', read_only=True)
+    reaction_count = serializers.IntegerField(source='reactions.count', read_only=True)
 
     class Meta:
         model = BlogPostModel
         fields = [
             'id', 'title', 'slug', 'content', 'author_handle',
-            'status', 'visibility', 'published_at', 'created_at',
+            'status', 'visibility', 'published_at', 'created_at', 'reaction_count',
         ]
 
 

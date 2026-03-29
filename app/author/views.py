@@ -1,7 +1,7 @@
 from rest_framework import viewsets, status, generics, filters
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.views import APIView
-from .models import AuthorModel, BlogPostModel, Follow, Comment
+from .models import AuthorModel, BlogPostModel, Follow, Comment, Reaction
 from .serializers import (
     AuthorSerializer, BlogPostSerializer, PublicPostSerializer,
     PostImageSerializer, UserRegistrationSerializer,
@@ -132,6 +132,32 @@ class CommentDetailView(generics.RetrieveUpdateDestroyAPIView):
         if self.request.method in ('PATCH', 'DELETE'):
             return [IsAuthenticated(), IsCommentOwner()]
         return [IsAuthenticated()]
+
+
+class PostReactView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, pk):
+        from django.shortcuts import get_object_or_404
+        post = get_object_or_404(BlogPostModel, pk=pk)
+        reaction, created = Reaction.objects.get_or_create(user=request.user, post=post)
+        if not created:
+            reaction.delete()
+            return Response(status=status.HTTP_204_NO_CONTENT)
+        return Response({"detail": "Reacted."}, status=status.HTTP_201_CREATED)
+
+
+class CommentReactView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, pk):
+        from django.shortcuts import get_object_or_404
+        comment = get_object_or_404(Comment, pk=pk)
+        reaction, created = Reaction.objects.get_or_create(user=request.user, comment=comment)
+        if not created:
+            reaction.delete()
+            return Response(status=status.HTTP_204_NO_CONTENT)
+        return Response({"detail": "Reacted."}, status=status.HTTP_201_CREATED)
 
 
 class IsCommentOwner(BasePermission):
