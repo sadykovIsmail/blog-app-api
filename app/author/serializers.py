@@ -1,5 +1,5 @@
 from django.contrib.auth import get_user_model
-from .models import AuthorModel, BlogPostModel, Comment, Reaction, Notification, Citation
+from .models import AuthorModel, BlogPostModel, Comment, Reaction, Notification, Citation, PostVersion
 from rest_framework import serializers
 
 User = get_user_model()
@@ -80,6 +80,7 @@ class AuthorSerializer(serializers.ModelSerializer):
 
 class BlogPostSerializer(serializers.ModelSerializer):
     author_name = serializers.CharField(source='author.name', read_only=True)
+    reason_for_change = serializers.CharField(write_only=True, required=False, allow_blank=True)
 
     class Meta:
         model = BlogPostModel
@@ -88,8 +89,17 @@ class BlogPostSerializer(serializers.ModelSerializer):
             'status', 'visibility', 'slug',
             'published_at', 'scheduled_for',
             'created_at', 'updated_at', 'image', 'user',
+            'reason_for_change',
         ]
         read_only_fields = ['id', 'slug', 'published_at', 'created_at', 'updated_at', 'user']
+
+
+class PostVersionSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = PostVersion
+        fields = ['id', 'version_number', 'title_snapshot', 'content_snapshot',
+                  'reason_for_change', 'changed_at']
+        read_only_fields = fields
 
 
 class CommentSerializer(serializers.ModelSerializer):
