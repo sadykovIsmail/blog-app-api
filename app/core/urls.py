@@ -30,6 +30,7 @@ from author.views import (
     PostReactView, CommentReactView, NotificationListView,
     CitationListCreateView, CitationDetailView, EvidencePanelView,
     PostChangelogView, PostReviewListCreateView,
+    ReportPostView, ReportCommentView, HideCommentView,
 )
 
 urlpatterns = [
@@ -56,4 +57,7 @@ urlpatterns = [
     path('api/posts/<int:pk>/evidence/', EvidencePanelView.as_view(), name='post-evidence'),
     path('api/posts/<int:pk>/changelog/', PostChangelogView.as_view(), name='post-changelog'),
     path('api/posts/<int:post_id>/reviews/', PostReviewListCreateView.as_view(), name='post-reviews'),
+    path('api/posts/<int:pk>/report/', ReportPostView.as_view(), name='report-post'),
+    path('api/comments/<int:pk>/report/', ReportCommentView.as_view(), name='report-comment'),
+    path('api/comments/<int:pk>/hide/', HideCommentView.as_view(), name='hide-comment'),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

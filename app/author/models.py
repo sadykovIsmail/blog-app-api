@@ -19,6 +19,43 @@ class Follow(models.Model):
         return f"{self.follower} -> {self.following}"
 
 
+class Report(models.Model):
+    class TargetType(models.TextChoices):
+        POST = "post", "Post"
+        COMMENT = "comment", "Comment"
+
+    reporter = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='reports_filed',
+    )
+    target_type = models.CharField(max_length=10, choices=TargetType.choices)
+    post = models.ForeignKey(
+        'BlogPostModel', null=True, blank=True, on_delete=models.CASCADE, related_name='reports',
+    )
+    comment = models.ForeignKey(
+        'Comment', null=True, blank=True, on_delete=models.CASCADE, related_name='reports',
+    )
+    reason = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Report by {self.reporter} on {self.target_type}"
+
+
+class ModerationAuditLog(models.Model):
+    actor = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL,
+        null=True, related_name='moderation_actions',
+    )
+    action = models.CharField(max_length=50)
+    target_type = models.CharField(max_length=50, blank=True)
+    target_id = models.PositiveIntegerField(null=True, blank=True)
+    note = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.actor} — {self.action} at {self.created_at}"
+
+
 class PostReview(models.Model):
     post = models.ForeignKey(
         'BlogPostModel', on_delete=models.CASCADE, related_name='reviews',
@@ -139,6 +176,7 @@ class Comment(models.Model):
         'self', null=True, blank=True, on_delete=models.CASCADE, related_name='replies',
     )
     body = models.TextField()
+    is_hidden = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

@@ -4,6 +4,7 @@ from rest_framework.views import APIView
 from .models import (
     AuthorModel, BlogPostModel, Follow, Comment,
     Reaction, Notification, Citation, PostVersion, PostReview,
+    Report, ModerationAuditLog,
 )
 from .serializers import (
     AuthorSerializer, BlogPostSerializer, PublicPostSerializer,
@@ -215,6 +216,58 @@ class PostReviewListCreateView(generics.ListCreateAPIView):
             from rest_framework.exceptions import ValidationError
             raise ValidationError("You cannot review your own post.")
         serializer.save(reviewer=self.request.user, post=post)
+
+
+class IsStaff(BasePermission):
+    def has_permission(self, request, view):
+        return bool(request.user and request.user.is_staff)
+
+
+class ReportPostView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, pk):
+        from django.shortcuts import get_object_or_404
+        post = get_object_or_404(BlogPostModel, pk=pk)
+        reason = request.data.get('reason', '').strip()
+        if not reason:
+            return Response({"detail": "Reason is required."}, status=status.HTTP_400_BAD_REQUEST)
+        Report.objects.create(
+            reporter=request.user, target_type='post', post=post, reason=reason,
+        )
+        return Response({"detail": "Report submitted."}, status=status.HTTP_201_CREATED)
+
+
+class ReportCommentView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, pk):
+        from django.shortcuts import get_object_or_404
+        comment = get_object_or_404(Comment, pk=pk)
+        reason = request.data.get('reason', '').strip()
+        if not reason:
+            return Response({"detail": "Reason is required."}, status=status.HTTP_400_BAD_REQUEST)
+        Report.objects.create(
+            reporter=request.user, target_type='comment', comment=comment, reason=reason,
+        )
+        return Response({"detail": "Report submitted."}, status=status.HTTP_201_CREATED)
+
+
+class HideCommentView(APIView):
+    permission_classes = [IsAuthenticated, IsStaff]
+
+    def post(self, request, pk):
+        from django.shortcuts import get_object_or_404
+        comment = get_object_or_404(Comment, pk=pk)
+        comment.is_hidden = True
+        comment.save(update_fields=['is_hidden'])
+        ModerationAuditLog.objects.create(
+            actor=request.user,
+            action='hide_comment',
+            target_type='comment',
+            target_id=comment.id,
+        )
+        return Response({"detail": "Comment hidden."}, status=status.HTTP_200_OK)
 
 
 class PostChangelogView(generics.ListAPIView):
