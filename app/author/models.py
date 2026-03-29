@@ -229,6 +229,12 @@ class BlogPostModel(models.Model):
     published_at = models.DateTimeField(null=True, blank=True)
     scheduled_for = models.DateTimeField(null=True, blank=True)
 
+    class Meta:
+        indexes = [
+            models.Index(fields=['status', 'visibility']),
+            models.Index(fields=['-published_at']),
+        ]
+
     def save(self, *args, **kwargs):
         if not self.slug:
             self.slug = self._generate_unique_slug()
