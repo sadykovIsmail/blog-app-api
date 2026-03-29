@@ -1,11 +1,12 @@
 from rest_framework import viewsets, status, generics, filters
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.views import APIView
-from .models import AuthorModel, BlogPostModel, Follow, Comment, Reaction
+from .models import AuthorModel, BlogPostModel, Follow, Comment, Reaction, Notification
 from .serializers import (
     AuthorSerializer, BlogPostSerializer, PublicPostSerializer,
     PostImageSerializer, UserRegistrationSerializer,
-    UserProfileSerializer, UserPublicProfileSerializer, CommentSerializer,
+    UserProfileSerializer, UserPublicProfileSerializer,
+    CommentSerializer, NotificationSerializer,
 )
 from rest_framework.permissions import BasePermission, AllowAny, IsAuthenticated
 from rest_framework.decorators import action
@@ -91,6 +92,9 @@ class FollowView(APIView):
         _, created = Follow.objects.get_or_create(follower=request.user, following=target)
         if not created:
             return Response({"detail": "Already following."}, status=status.HTTP_400_BAD_REQUEST)
+        Notification.objects.create(
+            recipient=target, actor=request.user, notification_type="follow",
+        )
         return Response({"detail": "Followed."}, status=status.HTTP_201_CREATED)
 
 
@@ -120,7 +124,18 @@ class PostCommentListCreateView(generics.ListCreateAPIView):
     def perform_create(self, serializer):
         from django.shortcuts import get_object_or_404
         post = get_object_or_404(BlogPostModel, pk=self.kwargs['post_id'])
-        serializer.save(user=self.request.user, post=post)
+        comment = serializer.save(user=self.request.user, post=post)
+        if comment.parent:
+            if comment.parent.user != self.request.user:
+                Notification.objects.create(
+                    recipient=comment.parent.user, actor=self.request.user,
+                    notification_type="reply", comment=comment,
+                )
+        elif post.user != self.request.user:
+            Notification.objects.create(
+                recipient=post.user, actor=self.request.user,
+                notification_type="comment", post=post, comment=comment,
+            )
 
 
 class CommentDetailView(generics.RetrieveUpdateDestroyAPIView):
@@ -158,6 +173,24 @@ class CommentReactView(APIView):
             reaction.delete()
             return Response(status=status.HTTP_204_NO_CONTENT)
         return Response({"detail": "Reacted."}, status=status.HTTP_201_CREATED)
+
+
+class NotificationListView(generics.ListAPIView):
+    serializer_class = NotificationSerializer
+    permission_classes = [IsAuthenticated]
+    pagination_class = StandardPagination
+
+    def get_queryset(self):
+        return Notification.objects.filter(recipient=self.request.user)
+
+    def list(self, request, *args, **kwargs):
+        qs = self.get_queryset()
+        unread_count = qs.filter(is_read=False).count()
+        page = self.paginate_queryset(qs)
+        serializer = self.get_serializer(page, many=True)
+        response = self.get_paginated_response(serializer.data)
+        response.data['unread_count'] = unread_count
+        return response
 
 
 class IsCommentOwner(BasePermission):

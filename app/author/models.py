@@ -19,6 +19,37 @@ class Follow(models.Model):
         return f"{self.follower} -> {self.following}"
 
 
+class Notification(models.Model):
+    class Type(models.TextChoices):
+        FOLLOW = "follow", "Follow"
+        COMMENT = "comment", "Comment"
+        REPLY = "reply", "Reply"
+        NEW_POST = "new_post", "New Post"
+
+    recipient = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='notifications',
+    )
+    notification_type = models.CharField(max_length=20, choices=Type.choices)
+    actor = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL,
+        null=True, blank=True, related_name='sent_notifications',
+    )
+    post = models.ForeignKey(
+        'BlogPostModel', null=True, blank=True, on_delete=models.CASCADE,
+    )
+    comment = models.ForeignKey(
+        'Comment', null=True, blank=True, on_delete=models.CASCADE,
+    )
+    is_read = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"{self.notification_type} for {self.recipient}"
+
+
 class Reaction(models.Model):
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='reactions',
