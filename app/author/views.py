@@ -1,7 +1,8 @@
-from rest_framework import viewsets, status, generics
+from rest_framework import viewsets, status, generics, filters
+from rest_framework.pagination import PageNumberPagination
 from .models import AuthorModel, BlogPostModel
 from .serializers import (
-    AuthorSerializer, BlogPostSerializer,
+    AuthorSerializer, BlogPostSerializer, PublicPostSerializer,
     PostImageSerializer, UserRegistrationSerializer, UserProfileSerializer,
 )
 from rest_framework.permissions import BasePermission, AllowAny, IsAuthenticated
@@ -23,6 +24,28 @@ class ProfileView(generics.RetrieveUpdateAPIView):
 
     def get_object(self):
         return self.request.user
+
+
+class StandardPagination(PageNumberPagination):
+    page_size = 10
+    page_size_query_param = 'page_size'
+    max_page_size = 100
+
+
+class PublicPostListView(generics.ListAPIView):
+    serializer_class = PublicPostSerializer
+    permission_classes = [AllowAny]
+    pagination_class = StandardPagination
+    filter_backends = [filters.SearchFilter, filters.OrderingFilter]
+    search_fields = ['title', 'content']
+    ordering_fields = ['published_at', 'created_at']
+    ordering = ['-published_at']
+
+    def get_queryset(self):
+        return BlogPostModel.objects.filter(
+            status=BlogPostModel.Status.PUBLISHED,
+            visibility=BlogPostModel.Visibility.PUBLIC,
+        ).select_related('author', 'user')
 
 
 class IsOwner(BasePermission):

@@ -38,6 +38,17 @@ class UserProfileSerializer(serializers.ModelSerializer):
         return value
 
 
+class PublicPostSerializer(serializers.ModelSerializer):
+    author_handle = serializers.CharField(source='user.handle', read_only=True)
+
+    class Meta:
+        model = BlogPostModel
+        fields = [
+            'id', 'title', 'slug', 'content', 'author_handle',
+            'status', 'visibility', 'published_at', 'created_at',
+        ]
+
+
 class AuthorSerializer(serializers.ModelSerializer):
     """Serializer"""
     user_name = serializers.CharField(
