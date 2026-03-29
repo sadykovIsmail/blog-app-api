@@ -13,6 +13,7 @@ from .serializers import (
     PostVersionSerializer, PostReviewSerializer,
 )
 from rest_framework.permissions import BasePermission, AllowAny, IsAuthenticated
+from .throttles import RegisterThrottle, CommentThrottle, FollowThrottle, EvidenceThrottle
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.parsers import MultiPartParser, FormParser
@@ -22,6 +23,7 @@ from drf_spectacular.utils import extend_schema
 class RegisterView(generics.CreateAPIView):
     serializer_class = UserRegistrationSerializer
     permission_classes = [AllowAny]
+    throttle_classes = [RegisterThrottle]
 
 
 class ProfileView(generics.RetrieveUpdateAPIView):
@@ -85,6 +87,7 @@ class UserPublicProfileView(generics.RetrieveAPIView):
 
 class FollowView(APIView):
     permission_classes = [IsAuthenticated]
+    throttle_classes = [FollowThrottle]
 
     def post(self, request, pk):
         from django.contrib.auth import get_user_model
@@ -119,6 +122,7 @@ class UnfollowView(APIView):
 class PostCommentListCreateView(generics.ListCreateAPIView):
     serializer_class = CommentSerializer
     permission_classes = [IsAuthenticated]
+    throttle_classes = [CommentThrottle]
 
     def get_queryset(self):
         return Comment.objects.filter(
@@ -225,6 +229,7 @@ class PostChangelogView(generics.ListAPIView):
 
 class EvidencePanelView(APIView):
     permission_classes = [AllowAny]
+    throttle_classes = [EvidenceThrottle]
 
     def get(self, request, pk):
         from django.shortcuts import get_object_or_404
