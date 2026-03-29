@@ -194,6 +194,16 @@ class NotificationListView(generics.ListAPIView):
         return response
 
 
+class PostChangelogView(generics.ListAPIView):
+    serializer_class = PostVersionSerializer
+    permission_classes = [AllowAny]
+
+    def get_queryset(self):
+        from django.shortcuts import get_object_or_404
+        post = get_object_or_404(BlogPostModel, pk=self.kwargs['pk'])
+        return PostVersion.objects.filter(post=post)
+
+
 class EvidencePanelView(APIView):
     permission_classes = [AllowAny]
 

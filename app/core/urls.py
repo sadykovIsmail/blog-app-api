@@ -29,6 +29,7 @@ from author.views import (
     PostCommentListCreateView, CommentDetailView,
     PostReactView, CommentReactView, NotificationListView,
     CitationListCreateView, CitationDetailView, EvidencePanelView,
+    PostChangelogView,
 )
 
 urlpatterns = [
@@ -53,4 +54,5 @@ urlpatterns = [
     path('api/posts/<int:post_id>/citations/', CitationListCreateView.as_view(), name='post-citations'),
     path('api/citations/<int:pk>/', CitationDetailView.as_view(), name='citation-detail'),
     path('api/posts/<int:pk>/evidence/', EvidencePanelView.as_view(), name='post-evidence'),
+    path('api/posts/<int:pk>/changelog/', PostChangelogView.as_view(), name='post-changelog'),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
