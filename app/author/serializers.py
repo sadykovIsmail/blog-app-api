@@ -1,5 +1,5 @@
 from django.contrib.auth import get_user_model
-from .models import AuthorModel, BlogPostModel, Comment, Reaction, Notification, Citation, PostVersion
+from .models import AuthorModel, BlogPostModel, Comment, Reaction, Notification, Citation, PostVersion, PostReview
 from rest_framework import serializers
 
 User = get_user_model()
@@ -92,6 +92,20 @@ class BlogPostSerializer(serializers.ModelSerializer):
             'reason_for_change',
         ]
         read_only_fields = ['id', 'slug', 'published_at', 'created_at', 'updated_at', 'user']
+
+
+class PostReviewSerializer(serializers.ModelSerializer):
+    reviewer = serializers.ReadOnlyField(source='reviewer.username')
+
+    class Meta:
+        model = PostReview
+        fields = ['id', 'post', 'reviewer', 'rating', 'notes', 'created_at']
+        read_only_fields = ['id', 'post', 'reviewer', 'created_at']
+
+    def validate_rating(self, value):
+        if not (1 <= value <= 5):
+            raise serializers.ValidationError("Rating must be between 1 and 5.")
+        return value
 
 
 class PostVersionSerializer(serializers.ModelSerializer):
