@@ -19,6 +19,24 @@ class Follow(models.Model):
         return f"{self.follower} -> {self.following}"
 
 
+class Comment(models.Model):
+    post = models.ForeignKey(
+        'BlogPostModel', on_delete=models.CASCADE, related_name='comments',
+    )
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='comments',
+    )
+    parent = models.ForeignKey(
+        'self', null=True, blank=True, on_delete=models.CASCADE, related_name='replies',
+    )
+    body = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"Comment by {self.user} on {self.post}"
+
+
 class AuthorModel(models.Model):
     name = models.CharField(max_length=255)
     email = models.EmailField(max_length=255)

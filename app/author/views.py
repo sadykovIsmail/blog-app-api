@@ -1,11 +1,11 @@
 from rest_framework import viewsets, status, generics, filters
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.views import APIView
-from .models import AuthorModel, BlogPostModel, Follow
+from .models import AuthorModel, BlogPostModel, Follow, Comment
 from .serializers import (
     AuthorSerializer, BlogPostSerializer, PublicPostSerializer,
     PostImageSerializer, UserRegistrationSerializer,
-    UserProfileSerializer, UserPublicProfileSerializer,
+    UserProfileSerializer, UserPublicProfileSerializer, CommentSerializer,
 )
 from rest_framework.permissions import BasePermission, AllowAny, IsAuthenticated
 from rest_framework.decorators import action
@@ -106,6 +106,37 @@ class UnfollowView(APIView):
         if not deleted:
             return Response({"detail": "Not following."}, status=status.HTTP_400_BAD_REQUEST)
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class PostCommentListCreateView(generics.ListCreateAPIView):
+    serializer_class = CommentSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        return Comment.objects.filter(
+            post_id=self.kwargs['post_id'], parent__isnull=True,
+        ).select_related('user')
+
+    def perform_create(self, serializer):
+        from django.shortcuts import get_object_or_404
+        post = get_object_or_404(BlogPostModel, pk=self.kwargs['post_id'])
+        serializer.save(user=self.request.user, post=post)
+
+
+class CommentDetailView(generics.RetrieveUpdateDestroyAPIView):
+    serializer_class = CommentSerializer
+    queryset = Comment.objects.all()
+    http_method_names = ['get', 'patch', 'delete', 'head', 'options']
+
+    def get_permissions(self):
+        if self.request.method in ('PATCH', 'DELETE'):
+            return [IsAuthenticated(), IsCommentOwner()]
+        return [IsAuthenticated()]
+
+
+class IsCommentOwner(BasePermission):
+    def has_object_permission(self, request, view, obj):
+        return obj.user == request.user
 
 
 class IsOwner(BasePermission):
