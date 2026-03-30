@@ -47,12 +47,12 @@ class PublicPostListView(generics.ListAPIView):
     serializer_class = PublicPostSerializer
     permission_classes = [AllowAny]
     pagination_class = StandardPagination
-    filter_backends = [filters.SearchFilter, filters.OrderingFilter]
-    search_fields = ['title', 'content']
+    filter_backends = [filters.OrderingFilter]
     ordering_fields = ['published_at', 'created_at']
     ordering = ['-published_at']
 
     def get_queryset(self):
+        from django.contrib.postgres.search import SearchVector, SearchQuery, SearchRank
         qs = BlogPostModel.objects.filter(
             status=BlogPostModel.Status.PUBLISHED,
             visibility=BlogPostModel.Visibility.PUBLIC,
@@ -60,6 +60,11 @@ class PublicPostListView(generics.ListAPIView):
         tag_slug = self.request.query_params.get('tag')
         if tag_slug:
             qs = qs.filter(tags__slug=tag_slug)
+        search = self.request.query_params.get('search')
+        if search:
+            vector = SearchVector('title', weight='A') + SearchVector('content', weight='B')
+            query = SearchQuery(search)
+            qs = qs.annotate(rank=SearchRank(vector, query)).filter(rank__gt=0.01).order_by('-rank')
         return qs
 
     def list(self, request, *args, **kwargs):

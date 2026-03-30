@@ -38,7 +38,12 @@
       "Bash(GIT_AUTHOR_DATE=\"$D5\" GIT_COMMITTER_DATE=\"$D5\" git add app/author/tests/test_trending.py)",
       "Bash(GIT_AUTHOR_DATE=\"$D5\" GIT_COMMITTER_DATE=\"$D5\" git commit -m \"test: add failing TDD tests for trending posts algorithm\")",
       "Bash(GIT_AUTHOR_DATE=\"$D5\" GIT_COMMITTER_DATE=\"$D5\" git add -A)",
-      "Bash(GIT_AUTHOR_DATE=\"$D5\" GIT_COMMITTER_DATE=\"$D5\" git commit -m \"feat: add trending posts algorithm — Closes #63\")"
+      "Bash(GIT_AUTHOR_DATE=\"$D5\" GIT_COMMITTER_DATE=\"$D5\" git commit -m \"feat: add trending posts algorithm — Closes #63\")",
+      "Bash(D6=\"2026-03-30T14:00:00\")",
+      "Bash(GIT_AUTHOR_DATE=\"$D6\" GIT_COMMITTER_DATE=\"$D6\" git add app/author/tests/test_fulltext_search.py)",
+      "Bash(GIT_AUTHOR_DATE=\"$D6\" GIT_COMMITTER_DATE=\"$D6\" git commit -m \"test: add failing TDD tests for PostgreSQL full-text search\")",
+      "Bash(GIT_AUTHOR_DATE=\"$D6\" GIT_COMMITTER_DATE=\"$D6\" git add -A)",
+      "Bash(GIT_AUTHOR_DATE=\"$D6\" GIT_COMMITTER_DATE=\"$D6\" git commit -m \"feat: add PostgreSQL full-text search for public feed — Closes #64\")"
     ]
   }
 }
