@@ -13,7 +13,17 @@
       "Bash(GIT_AUTHOR_DATE=\"$D1\" GIT_COMMITTER_DATE=\"$D1\" git add app/author/tests/test_bookmarks.py)",
       "Bash(GIT_AUTHOR_DATE=\"$D1\" GIT_COMMITTER_DATE=\"$D1\" git commit -m \"test: add failing TDD tests for bookmarks\")",
       "Bash(D1=\"2026-03-30T11:00:00\")",
-      "Bash(GIT_AUTHOR_DATE=\"$D1\" GIT_COMMITTER_DATE=\"$D1\" git commit -m \"feat: add bookmarks — save posts to read later — Closes #58\")"
+      "Bash(GIT_AUTHOR_DATE=\"$D1\" GIT_COMMITTER_DATE=\"$D1\" git commit -m \"feat: add bookmarks — save posts to read later — Closes #58\")",
+      "Bash(D1=\"2026-03-30T11:30:00\")",
+      "Bash(GIT_AUTHOR_DATE=\"$D1\" GIT_COMMITTER_DATE=\"$D1\" git add app/author/tests/test_reading_time.py)",
+      "Bash(GIT_AUTHOR_DATE=\"$D1\" GIT_COMMITTER_DATE=\"$D1\" git commit -m \"test: add failing TDD tests for reading time estimation\")",
+      "Bash(GIT_AUTHOR_DATE=\"$D1\" GIT_COMMITTER_DATE=\"$D1\" git add app/author/serializers.py)",
+      "Bash(GIT_AUTHOR_DATE=\"$D1\" GIT_COMMITTER_DATE=\"$D1\" git commit -m \"feat: add reading time estimation — Closes #59\")",
+      "Bash(D2=\"2026-03-30T12:00:00\")",
+      "Bash(GIT_AUTHOR_DATE=\"$D2\" GIT_COMMITTER_DATE=\"$D2\" git add app/author/tests/test_series.py)",
+      "Bash(GIT_AUTHOR_DATE=\"$D2\" GIT_COMMITTER_DATE=\"$D2\" git commit -m \"test: add failing TDD tests for post series and collections\")",
+      "Bash(GIT_AUTHOR_DATE=\"$D2\" GIT_COMMITTER_DATE=\"$D2\" git add -A)",
+      "Bash(GIT_AUTHOR_DATE=\"$D2\" GIT_COMMITTER_DATE=\"$D2\" git commit -m \"feat: add post series and collections — Closes #60\")"
     ]
   }
 }

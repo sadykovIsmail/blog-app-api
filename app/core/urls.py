@@ -32,6 +32,7 @@ from author.views import (
     CitationListCreateView, CitationDetailView, EvidencePanelView,
     PostChangelogView, PostReviewListCreateView,
     ReportPostView, ReportCommentView, HideCommentView,
+    SeriesListCreateView, SeriesDetailView, SeriesPostView,
 )
 
 urlpatterns = [
@@ -66,4 +67,7 @@ urlpatterns = [
     path('api/posts/<int:pk>/report/', ReportPostView.as_view(), name='report-post'),
     path('api/comments/<int:pk>/report/', ReportCommentView.as_view(), name='report-comment'),
     path('api/comments/<int:pk>/hide/', HideCommentView.as_view(), name='hide-comment'),
+    path('api/series/', SeriesListCreateView.as_view(), name='series-list'),
+    path('api/series/<int:pk>/', SeriesDetailView.as_view(), name='series-detail'),
+    path('api/series/<int:series_id>/posts/', SeriesPostView.as_view(), name='series-posts'),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

@@ -4,7 +4,7 @@ from rest_framework.views import APIView
 from .models import (
     AuthorModel, BlogPostModel, Follow, Comment,
     Reaction, Notification, Citation, PostVersion, PostReview,
-    Report, ModerationAuditLog, Tag, Bookmark,
+    Report, ModerationAuditLog, Tag, Bookmark, Series, SeriesPost,
 )
 from .serializers import (
     AuthorSerializer, BlogPostSerializer, PublicPostSerializer,
@@ -12,6 +12,7 @@ from .serializers import (
     UserProfileSerializer, UserPublicProfileSerializer,
     CommentSerializer, NotificationSerializer, CitationSerializer,
     PostVersionSerializer, PostReviewSerializer, TagSerializer, BookmarkSerializer,
+    SeriesSerializer,
 )
 from rest_framework.permissions import BasePermission, AllowAny, IsAuthenticated
 from .throttles import RegisterThrottle, CommentThrottle, FollowThrottle, EvidenceThrottle
@@ -488,3 +489,54 @@ class BookmarkListView(generics.ListAPIView):
 
     def get_queryset(self):
         return Bookmark.objects.filter(user=self.request.user).select_related('post').order_by('-created_at')
+
+
+class IsSeriesOwner(BasePermission):
+    def has_object_permission(self, request, view, obj):
+        return obj.owner == request.user
+
+
+class SeriesListCreateView(generics.ListCreateAPIView):
+    serializer_class = SeriesSerializer
+    pagination_class = StandardPagination
+
+    def get_permissions(self):
+        if self.request.method == 'GET':
+            return [AllowAny()]
+        return [IsAuthenticated()]
+
+    def get_queryset(self):
+        return Series.objects.all()
+
+    def perform_create(self, serializer):
+        serializer.save(owner=self.request.user)
+
+
+class SeriesDetailView(generics.RetrieveUpdateDestroyAPIView):
+    serializer_class = SeriesSerializer
+    queryset = Series.objects.all()
+
+    def get_permissions(self):
+        if self.request.method in ('PUT', 'PATCH', 'DELETE'):
+            return [IsAuthenticated(), IsSeriesOwner()]
+        return [AllowAny()]
+
+
+class SeriesPostView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, series_id):
+        from django.shortcuts import get_object_or_404
+        series = get_object_or_404(Series, pk=series_id, owner=request.user)
+        post_id = request.data.get('post_id')
+        order = request.data.get('order', 0)
+        post = get_object_or_404(BlogPostModel, pk=post_id, user=request.user)
+        obj, _ = SeriesPost.objects.get_or_create(series=series, post=post, defaults={'order': order})
+        return Response({'series_id': series.id, 'post_id': post.id, 'order': obj.order}, status=201)
+
+    def delete(self, request, series_id):
+        from django.shortcuts import get_object_or_404
+        series = get_object_or_404(Series, pk=series_id, owner=request.user)
+        post_id = request.data.get('post_id')
+        SeriesPost.objects.filter(series=series, post_id=post_id).delete()
+        return Response(status=204)

@@ -284,3 +284,39 @@ class BlogPostModel(models.Model):
 
     def __str__(self):
         return self.title
+
+
+class Series(models.Model):
+    owner = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='series')
+    title = models.CharField(max_length=200)
+    slug = models.SlugField(max_length=220, unique=True, blank=True)
+    description = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def save(self, *args, **kwargs):
+        if not self.slug:
+            from django.utils.text import slugify
+            base = slugify(self.title)
+            slug = base
+            n = 1
+            while Series.objects.filter(slug=slug).exists():
+                slug = f"{base}-{n}"
+                n += 1
+            self.slug = slug
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return self.title
+
+
+class SeriesPost(models.Model):
+    series = models.ForeignKey(Series, on_delete=models.CASCADE, related_name='series_posts')
+    post = models.ForeignKey('BlogPostModel', on_delete=models.CASCADE, related_name='series_posts')
+    order = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        unique_together = ('series', 'post')
+        ordering = ['order']
+
+    def __str__(self):
+        return f"{self.series} - {self.post}"
