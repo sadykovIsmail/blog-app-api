@@ -258,6 +258,7 @@ class BlogPostModel(models.Model):
     published_at = models.DateTimeField(null=True, blank=True)
     scheduled_for = models.DateTimeField(null=True, blank=True)
     tags = models.ManyToManyField(Tag, blank=True, related_name='posts')
+    pinned = models.BooleanField(default=False)
 
     class Meta:
         indexes = [

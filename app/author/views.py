@@ -91,7 +91,7 @@ class PublicProfilePostsView(generics.ListAPIView):
             user=user,
             status=BlogPostModel.Status.PUBLISHED,
             visibility=BlogPostModel.Visibility.PUBLIC,
-        ).select_related('author', 'user').prefetch_related('tags')
+        ).select_related('author', 'user').prefetch_related('tags').order_by('-pinned', '-published_at')
 
 
 class UserPublicProfileView(generics.RetrieveAPIView):
@@ -540,6 +540,25 @@ class SeriesPostView(APIView):
         post_id = request.data.get('post_id')
         SeriesPost.objects.filter(series=series, post_id=post_id).delete()
         return Response(status=204)
+
+
+class PostPinView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, pk):
+        from django.shortcuts import get_object_or_404
+        post = get_object_or_404(BlogPostModel, pk=pk, user=request.user)
+        BlogPostModel.objects.filter(user=request.user, pinned=True).update(pinned=False)
+        post.pinned = True
+        post.save(update_fields=['pinned'])
+        return Response({'pinned': True})
+
+    def delete(self, request, pk):
+        from django.shortcuts import get_object_or_404
+        post = get_object_or_404(BlogPostModel, pk=pk, user=request.user)
+        post.pinned = False
+        post.save(update_fields=['pinned'])
+        return Response({'pinned': False})
 
 
 class BlockView(APIView):

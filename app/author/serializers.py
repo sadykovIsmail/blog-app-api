@@ -76,7 +76,7 @@ class PublicPostSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'title', 'slug', 'content', 'author_handle',
             'status', 'visibility', 'published_at', 'created_at', 'reaction_count', 'tags',
-            'reading_time_minutes',
+            'reading_time_minutes', 'pinned',
         ]
 
     def get_reading_time_minutes(self, obj):

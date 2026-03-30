@@ -28,7 +28,12 @@
       "Bash(GIT_AUTHOR_DATE=\"$D3\" GIT_COMMITTER_DATE=\"$D3\" git add app/author/tests/test_blocking.py)",
       "Bash(GIT_AUTHOR_DATE=\"$D3\" GIT_COMMITTER_DATE=\"$D3\" git commit -m \"test: add failing TDD tests for user blocking\")",
       "Bash(GIT_AUTHOR_DATE=\"$D3\" GIT_COMMITTER_DATE=\"$D3\" git add -A)",
-      "Bash(GIT_AUTHOR_DATE=\"$D3\" GIT_COMMITTER_DATE=\"$D3\" git commit -m \"feat: add user blocking — Closes #61\")"
+      "Bash(GIT_AUTHOR_DATE=\"$D3\" GIT_COMMITTER_DATE=\"$D3\" git commit -m \"feat: add user blocking — Closes #61\")",
+      "Bash(D4=\"2026-03-30T13:00:00\")",
+      "Bash(GIT_AUTHOR_DATE=\"$D4\" GIT_COMMITTER_DATE=\"$D4\" git add app/author/tests/test_pinning.py)",
+      "Bash(GIT_AUTHOR_DATE=\"$D4\" GIT_COMMITTER_DATE=\"$D4\" git commit -m \"test: add failing TDD tests for post pinning\")",
+      "Bash(GIT_AUTHOR_DATE=\"$D4\" GIT_COMMITTER_DATE=\"$D4\" git add -A)",
+      "Bash(GIT_AUTHOR_DATE=\"$D4\" GIT_COMMITTER_DATE=\"$D4\" git commit -m \"feat: add post pinning — Closes #62\")"
     ]
   }
 }
