@@ -4,7 +4,7 @@ from rest_framework.views import APIView
 from .models import (
     AuthorModel, BlogPostModel, Follow, Comment,
     Reaction, Notification, Citation, PostVersion, PostReview,
-    Report, ModerationAuditLog, Tag, Bookmark, Series, SeriesPost,
+    Report, ModerationAuditLog, Tag, Bookmark, Series, SeriesPost, Block,
 )
 from .serializers import (
     AuthorSerializer, BlogPostSerializer, PublicPostSerializer,
@@ -539,4 +539,22 @@ class SeriesPostView(APIView):
         series = get_object_or_404(Series, pk=series_id, owner=request.user)
         post_id = request.data.get('post_id')
         SeriesPost.objects.filter(series=series, post_id=post_id).delete()
+        return Response(status=204)
+
+
+class BlockView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, pk):
+        from django.contrib.auth import get_user_model
+        from django.shortcuts import get_object_or_404
+        User = get_user_model()
+        target = get_object_or_404(User, pk=pk)
+        if target == request.user:
+            return Response({'detail': 'Cannot block yourself.'}, status=400)
+        Block.objects.get_or_create(blocker=request.user, blocked=target)
+        return Response({'detail': 'Blocked.'}, status=201)
+
+    def delete(self, request, pk):
+        Block.objects.filter(blocker=request.user, blocked_id=pk).delete()
         return Response(status=204)

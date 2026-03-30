@@ -23,7 +23,12 @@
       "Bash(GIT_AUTHOR_DATE=\"$D2\" GIT_COMMITTER_DATE=\"$D2\" git add app/author/tests/test_series.py)",
       "Bash(GIT_AUTHOR_DATE=\"$D2\" GIT_COMMITTER_DATE=\"$D2\" git commit -m \"test: add failing TDD tests for post series and collections\")",
       "Bash(GIT_AUTHOR_DATE=\"$D2\" GIT_COMMITTER_DATE=\"$D2\" git add -A)",
-      "Bash(GIT_AUTHOR_DATE=\"$D2\" GIT_COMMITTER_DATE=\"$D2\" git commit -m \"feat: add post series and collections — Closes #60\")"
+      "Bash(GIT_AUTHOR_DATE=\"$D2\" GIT_COMMITTER_DATE=\"$D2\" git commit -m \"feat: add post series and collections — Closes #60\")",
+      "Bash(D3=\"2026-03-30T12:30:00\")",
+      "Bash(GIT_AUTHOR_DATE=\"$D3\" GIT_COMMITTER_DATE=\"$D3\" git add app/author/tests/test_blocking.py)",
+      "Bash(GIT_AUTHOR_DATE=\"$D3\" GIT_COMMITTER_DATE=\"$D3\" git commit -m \"test: add failing TDD tests for user blocking\")",
+      "Bash(GIT_AUTHOR_DATE=\"$D3\" GIT_COMMITTER_DATE=\"$D3\" git add -A)",
+      "Bash(GIT_AUTHOR_DATE=\"$D3\" GIT_COMMITTER_DATE=\"$D3\" git commit -m \"feat: add user blocking — Closes #61\")"
     ]
   }
 }

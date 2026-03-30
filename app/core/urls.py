@@ -33,6 +33,7 @@ from author.views import (
     PostChangelogView, PostReviewListCreateView,
     ReportPostView, ReportCommentView, HideCommentView,
     SeriesListCreateView, SeriesDetailView, SeriesPostView,
+    BlockView,
 )
 
 urlpatterns = [
@@ -70,4 +71,5 @@ urlpatterns = [
     path('api/series/', SeriesListCreateView.as_view(), name='series-list'),
     path('api/series/<int:pk>/', SeriesDetailView.as_view(), name='series-detail'),
     path('api/series/<int:series_id>/posts/', SeriesPostView.as_view(), name='series-posts'),
+    path('api/users/<int:pk>/block/', BlockView.as_view(), name='block'),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
