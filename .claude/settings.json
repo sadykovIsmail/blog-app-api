@@ -33,7 +33,12 @@
       "Bash(GIT_AUTHOR_DATE=\"$D4\" GIT_COMMITTER_DATE=\"$D4\" git add app/author/tests/test_pinning.py)",
       "Bash(GIT_AUTHOR_DATE=\"$D4\" GIT_COMMITTER_DATE=\"$D4\" git commit -m \"test: add failing TDD tests for post pinning\")",
       "Bash(GIT_AUTHOR_DATE=\"$D4\" GIT_COMMITTER_DATE=\"$D4\" git add -A)",
-      "Bash(GIT_AUTHOR_DATE=\"$D4\" GIT_COMMITTER_DATE=\"$D4\" git commit -m \"feat: add post pinning — Closes #62\")"
+      "Bash(GIT_AUTHOR_DATE=\"$D4\" GIT_COMMITTER_DATE=\"$D4\" git commit -m \"feat: add post pinning — Closes #62\")",
+      "Bash(D5=\"2026-03-30T13:30:00\")",
+      "Bash(GIT_AUTHOR_DATE=\"$D5\" GIT_COMMITTER_DATE=\"$D5\" git add app/author/tests/test_trending.py)",
+      "Bash(GIT_AUTHOR_DATE=\"$D5\" GIT_COMMITTER_DATE=\"$D5\" git commit -m \"test: add failing TDD tests for trending posts algorithm\")",
+      "Bash(GIT_AUTHOR_DATE=\"$D5\" GIT_COMMITTER_DATE=\"$D5\" git add -A)",
+      "Bash(GIT_AUTHOR_DATE=\"$D5\" GIT_COMMITTER_DATE=\"$D5\" git commit -m \"feat: add trending posts algorithm — Closes #63\")"
     ]
   }
 }

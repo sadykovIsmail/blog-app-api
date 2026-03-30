@@ -33,7 +33,7 @@ from author.views import (
     PostChangelogView, PostReviewListCreateView,
     ReportPostView, ReportCommentView, HideCommentView,
     SeriesListCreateView, SeriesDetailView, SeriesPostView,
-    BlockView, PostPinView,
+    BlockView, PostPinView, TrendingPostsView,
 )
 
 urlpatterns = [
@@ -45,6 +45,7 @@ urlpatterns = [
     path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
     path('api/auth/register/', RegisterView.as_view(), name='register'),
     path('api/auth/profile/', ProfileView.as_view(), name='profile'),
+    path('api/public/posts/trending/', TrendingPostsView.as_view(), name='trending-posts'),
     path('api/public/posts/', PublicPostListView.as_view(), name='public-post-list'),
     path('api/public/profiles/<str:handle>/posts/', PublicProfilePostsView.as_view(), name='public-profile-posts'),
     path('api/tags/', TagListCreateView.as_view(), name='tag-list'),

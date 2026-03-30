@@ -542,6 +542,27 @@ class SeriesPostView(APIView):
         return Response(status=204)
 
 
+class TrendingPostsView(generics.ListAPIView):
+    serializer_class = PublicPostSerializer
+    permission_classes = [AllowAny]
+    pagination_class = StandardPagination
+
+    def get_queryset(self):
+        from django.db.models import Count
+        from django.utils import timezone
+        from datetime import timedelta
+
+        cutoff = timezone.now() - timedelta(days=30)
+        return BlogPostModel.objects.filter(
+            status=BlogPostModel.Status.PUBLISHED,
+            visibility=BlogPostModel.Visibility.PUBLIC,
+            published_at__gte=cutoff,
+        ).annotate(
+            reaction_cnt=Count('reactions', distinct=True),
+            comment_cnt=Count('comments', distinct=True),
+        ).order_by('-reaction_cnt', '-comment_cnt', '-published_at').select_related('author', 'user').prefetch_related('reactions', 'tags')
+
+
 class PostPinView(APIView):
     permission_classes = [IsAuthenticated]
 
