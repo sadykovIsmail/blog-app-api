@@ -1,5 +1,5 @@
 from django.contrib.auth import get_user_model
-from .models import AuthorModel, BlogPostModel, Comment, Reaction, Notification, Citation, PostVersion, PostReview, Tag
+from .models import AuthorModel, BlogPostModel, Comment, Reaction, Notification, Citation, PostVersion, PostReview, Tag, Bookmark
 from rest_framework import serializers
 
 User = get_user_model()
@@ -172,6 +172,17 @@ class NotificationSerializer(serializers.ModelSerializer):
     class Meta:
         model = Notification
         fields = ['id', 'notification_type', 'actor', 'post', 'comment', 'is_read', 'created_at']
+        read_only_fields = fields
+
+
+class BookmarkSerializer(serializers.ModelSerializer):
+    title = serializers.CharField(source='post.title', read_only=True)
+    slug = serializers.CharField(source='post.slug', read_only=True)
+    post_id = serializers.IntegerField(source='post.id', read_only=True)
+
+    class Meta:
+        model = Bookmark
+        fields = ['id', 'post_id', 'title', 'slug', 'created_at']
         read_only_fields = fields
 
 

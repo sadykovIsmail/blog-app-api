@@ -8,7 +8,12 @@
       "Bash(\"c:/Users/ismai/OneDrive/Desktop/blog-app-api/app/author/views.py\":*)",
       "Bash(D1=\"2026-03-30T10:00:00\")",
       "Bash(GIT_AUTHOR_DATE=\"$D1\" GIT_COMMITTER_DATE=\"$D1\" git add -A)",
-      "Bash(GIT_AUTHOR_DATE=\"$D1\" GIT_COMMITTER_DATE=\"$D1\" git commit -m \"feat: add tags and categories system — Closes #57\")"
+      "Bash(GIT_AUTHOR_DATE=\"$D1\" GIT_COMMITTER_DATE=\"$D1\" git commit -m \"feat: add tags and categories system — Closes #57\")",
+      "Bash(D1=\"2026-03-30T10:30:00\")",
+      "Bash(GIT_AUTHOR_DATE=\"$D1\" GIT_COMMITTER_DATE=\"$D1\" git add app/author/tests/test_bookmarks.py)",
+      "Bash(GIT_AUTHOR_DATE=\"$D1\" GIT_COMMITTER_DATE=\"$D1\" git commit -m \"test: add failing TDD tests for bookmarks\")",
+      "Bash(D1=\"2026-03-30T11:00:00\")",
+      "Bash(GIT_AUTHOR_DATE=\"$D1\" GIT_COMMITTER_DATE=\"$D1\" git commit -m \"feat: add bookmarks — save posts to read later — Closes #58\")"
     ]
   }
 }

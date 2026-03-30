@@ -25,7 +25,7 @@ from rest_framework_simplejwt.views import (
 )
 from author.views import (
     RegisterView, ProfileView, PublicPostListView, PublicProfilePostsView,
-    TagListCreateView, PostTagView,
+    TagListCreateView, PostTagView, BookmarkView, BookmarkListView,
     FollowView, UnfollowView, UserPublicProfileView,
     PostCommentListCreateView, CommentDetailView,
     PostReactView, CommentReactView, NotificationListView,
@@ -48,6 +48,8 @@ urlpatterns = [
     path('api/tags/', TagListCreateView.as_view(), name='tag-list'),
     path('api/posts/<int:post_id>/tags/', PostTagView.as_view(), name='post-tag-add'),
     path('api/posts/<int:post_id>/tags/<int:tag_id>/', PostTagView.as_view(), name='post-tag-remove'),
+    path('api/posts/<int:pk>/bookmark/', BookmarkView.as_view(), name='bookmark'),
+    path('api/bookmarks/', BookmarkListView.as_view(), name='bookmark-list'),
     path('api/users/<int:pk>/', UserPublicProfileView.as_view(), name='profile-detail'),
     path('api/users/<int:pk>/follow/', FollowView.as_view(), name='follow'),
     path('api/users/<int:pk>/unfollow/', UnfollowView.as_view(), name='unfollow'),

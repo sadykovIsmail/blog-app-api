@@ -4,14 +4,14 @@ from rest_framework.views import APIView
 from .models import (
     AuthorModel, BlogPostModel, Follow, Comment,
     Reaction, Notification, Citation, PostVersion, PostReview,
-    Report, ModerationAuditLog, Tag,
+    Report, ModerationAuditLog, Tag, Bookmark,
 )
 from .serializers import (
     AuthorSerializer, BlogPostSerializer, PublicPostSerializer,
     PostImageSerializer, UserRegistrationSerializer,
     UserProfileSerializer, UserPublicProfileSerializer,
     CommentSerializer, NotificationSerializer, CitationSerializer,
-    PostVersionSerializer, PostReviewSerializer, TagSerializer,
+    PostVersionSerializer, PostReviewSerializer, TagSerializer, BookmarkSerializer,
 )
 from rest_framework.permissions import BasePermission, AllowAny, IsAuthenticated
 from .throttles import RegisterThrottle, CommentThrottle, FollowThrottle, EvidenceThrottle
@@ -458,3 +458,33 @@ class PostTagView(APIView):
         tag = get_object_or_404(Tag, pk=tag_id)
         post.tags.remove(tag)
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class BookmarkView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, pk):
+        from django.shortcuts import get_object_or_404
+        post = get_object_or_404(BlogPostModel, pk=pk)
+        obj, created = Bookmark.objects.get_or_create(user=request.user, post=post)
+        if created:
+            return Response(BookmarkSerializer(obj).data, status=status.HTTP_201_CREATED)
+        return Response(BookmarkSerializer(obj).data, status=status.HTTP_200_OK)
+
+    def delete(self, request, pk):
+        from django.shortcuts import get_object_or_404
+        post = get_object_or_404(BlogPostModel, pk=pk)
+        bookmark = Bookmark.objects.filter(user=request.user, post=post).first()
+        if not bookmark:
+            return Response(status=status.HTTP_404_NOT_FOUND)
+        bookmark.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class BookmarkListView(generics.ListAPIView):
+    serializer_class = BookmarkSerializer
+    permission_classes = [IsAuthenticated]
+    pagination_class = StandardPagination
+
+    def get_queryset(self):
+        return Bookmark.objects.filter(user=self.request.user).select_related('post').order_by('-created_at')
