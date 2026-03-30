@@ -69,13 +69,18 @@ class PublicPostSerializer(serializers.ModelSerializer):
     author_handle = serializers.CharField(source='user.handle', read_only=True)
     reaction_count = serializers.IntegerField(source='reactions.count', read_only=True)
     tags = TagSerializer(many=True, read_only=True)
+    reading_time_minutes = serializers.SerializerMethodField()
 
     class Meta:
         model = BlogPostModel
         fields = [
             'id', 'title', 'slug', 'content', 'author_handle',
             'status', 'visibility', 'published_at', 'created_at', 'reaction_count', 'tags',
+            'reading_time_minutes',
         ]
+
+    def get_reading_time_minutes(self, obj):
+        return max(1, len(obj.content.split()) // 200)
 
 
 class AuthorSerializer(serializers.ModelSerializer):
@@ -94,6 +99,7 @@ class AuthorSerializer(serializers.ModelSerializer):
 class BlogPostSerializer(serializers.ModelSerializer):
     author_name = serializers.CharField(source='author.name', read_only=True)
     reason_for_change = serializers.CharField(write_only=True, required=False, allow_blank=True)
+    reading_time_minutes = serializers.SerializerMethodField()
 
     class Meta:
         model = BlogPostModel
@@ -102,9 +108,12 @@ class BlogPostSerializer(serializers.ModelSerializer):
             'status', 'visibility', 'slug',
             'published_at', 'scheduled_for',
             'created_at', 'updated_at', 'image', 'user',
-            'reason_for_change',
+            'reason_for_change', 'reading_time_minutes',
         ]
         read_only_fields = ['id', 'slug', 'published_at', 'created_at', 'updated_at', 'user']
+
+    def get_reading_time_minutes(self, obj):
+        return max(1, len(obj.content.split()) // 200)
 
     def validate(self, data):
         import re
