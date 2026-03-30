@@ -1,5 +1,5 @@
 from django.contrib.auth import get_user_model
-from .models import AuthorModel, BlogPostModel, Comment, Reaction, Notification, Citation, PostVersion, PostReview
+from .models import AuthorModel, BlogPostModel, Comment, Reaction, Notification, Citation, PostVersion, PostReview, Tag
 from rest_framework import serializers
 
 User = get_user_model()
@@ -53,15 +53,28 @@ class UserPublicProfileSerializer(serializers.ModelSerializer):
         return obj.following.count()
 
 
+class TagSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Tag
+        fields = ['id', 'name', 'slug']
+        read_only_fields = ['id', 'slug']
+
+    def validate_name(self, value):
+        if Tag.objects.filter(name__iexact=value).exists():
+            raise serializers.ValidationError("A tag with this name already exists.")
+        return value
+
+
 class PublicPostSerializer(serializers.ModelSerializer):
     author_handle = serializers.CharField(source='user.handle', read_only=True)
     reaction_count = serializers.IntegerField(source='reactions.count', read_only=True)
+    tags = TagSerializer(many=True, read_only=True)
 
     class Meta:
         model = BlogPostModel
         fields = [
             'id', 'title', 'slug', 'content', 'author_handle',
-            'status', 'visibility', 'published_at', 'created_at', 'reaction_count',
+            'status', 'visibility', 'published_at', 'created_at', 'reaction_count', 'tags',
         ]
 
 

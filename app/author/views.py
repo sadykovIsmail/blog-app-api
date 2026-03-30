@@ -4,14 +4,14 @@ from rest_framework.views import APIView
 from .models import (
     AuthorModel, BlogPostModel, Follow, Comment,
     Reaction, Notification, Citation, PostVersion, PostReview,
-    Report, ModerationAuditLog,
+    Report, ModerationAuditLog, Tag,
 )
 from .serializers import (
     AuthorSerializer, BlogPostSerializer, PublicPostSerializer,
     PostImageSerializer, UserRegistrationSerializer,
     UserProfileSerializer, UserPublicProfileSerializer,
     CommentSerializer, NotificationSerializer, CitationSerializer,
-    PostVersionSerializer, PostReviewSerializer,
+    PostVersionSerializer, PostReviewSerializer, TagSerializer,
 )
 from rest_framework.permissions import BasePermission, AllowAny, IsAuthenticated
 from .throttles import RegisterThrottle, CommentThrottle, FollowThrottle, EvidenceThrottle
@@ -52,10 +52,14 @@ class PublicPostListView(generics.ListAPIView):
     ordering = ['-published_at']
 
     def get_queryset(self):
-        return BlogPostModel.objects.filter(
+        qs = BlogPostModel.objects.filter(
             status=BlogPostModel.Status.PUBLISHED,
             visibility=BlogPostModel.Visibility.PUBLIC,
-        ).select_related('author', 'user').prefetch_related('reactions')
+        ).select_related('author', 'user').prefetch_related('reactions', 'tags')
+        tag_slug = self.request.query_params.get('tag')
+        if tag_slug:
+            qs = qs.filter(tags__slug=tag_slug)
+        return qs
 
     def list(self, request, *args, **kwargs):
         from django.core.cache import cache
@@ -86,7 +90,7 @@ class PublicProfilePostsView(generics.ListAPIView):
             user=user,
             status=BlogPostModel.Status.PUBLISHED,
             visibility=BlogPostModel.Visibility.PUBLIC,
-        ).select_related('author', 'user')
+        ).select_related('author', 'user').prefetch_related('tags')
 
 
 class UserPublicProfileView(generics.RetrieveAPIView):
@@ -425,3 +429,32 @@ class BlogPostViews(viewsets.ModelViewSet):
             return Response(serializer.data, status=status.HTTP_200_OK)
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class TagListCreateView(generics.ListCreateAPIView):
+    serializer_class = TagSerializer
+    queryset = Tag.objects.all()
+
+    def get_permissions(self):
+        if self.request.method == 'GET':
+            return [AllowAny()]
+        return [IsAuthenticated()]
+
+
+class PostTagView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, post_id):
+        from django.shortcuts import get_object_or_404
+        post = get_object_or_404(BlogPostModel, pk=post_id, user=request.user)
+        tag_id = request.data.get('tag_id')
+        tag = get_object_or_404(Tag, pk=tag_id)
+        post.tags.add(tag)
+        return Response(TagSerializer(tag).data)
+
+    def delete(self, request, post_id, tag_id):
+        from django.shortcuts import get_object_or_404
+        post = get_object_or_404(BlogPostModel, pk=post_id, user=request.user)
+        tag = get_object_or_404(Tag, pk=tag_id)
+        post.tags.remove(tag)
+        return Response(status=status.HTTP_204_NO_CONTENT)

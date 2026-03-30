@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash('/c/Program Files/GitHub CLI/gh.exe' pr list --state merged --limit 30 --json number,title,mergedAt --jq \".[] | \"\"#\\\\\\(.number\\) \\\\\\(.title\\)\"\"\")",
+      "Bash(D1=\"2026-03-30T09:00:00\")",
+      "Bash(GIT_AUTHOR_DATE=\"$D1\" GIT_COMMITTER_DATE=\"$D1\" git add app/author/tests/test_tags.py)",
+      "Bash(GIT_AUTHOR_DATE=\"$D1\" GIT_COMMITTER_DATE=\"$D1\" git commit -m \"test: add failing TDD tests for tags and categories system\")",
+      "Bash(\"c:/Users/ismai/OneDrive/Desktop/blog-app-api/app/author/views.py\":*)",
+      "Bash(D1=\"2026-03-30T10:00:00\")",
+      "Bash(GIT_AUTHOR_DATE=\"$D1\" GIT_COMMITTER_DATE=\"$D1\" git add -A)",
+      "Bash(GIT_AUTHOR_DATE=\"$D1\" GIT_COMMITTER_DATE=\"$D1\" git commit -m \"feat: add tags and categories system — Closes #57\")"
+    ]
+  }
+}
