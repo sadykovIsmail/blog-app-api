@@ -34,7 +34,7 @@ services:
       sh -c "
         python manage.py migrate &&
         python manage.py collectstatic --noinput &&
-        gunicorn core.wsgi:application --bind 0.0.0.0:8000 --workers 4 --timeout 60
+        gunicorn core.wsgi:application --bind 0.0.0.0:8000 --workers 4 --timeout 60 --worker-tmp-dir /dev/shm
       "
     volumes:
       - static_volume:/app/static
@@ -95,6 +95,21 @@ services:
       - ./docker/nginx/default.conf:/etc/nginx/conf.d/default.conf
     depends_on:
       - web
+
+  frontend:
+    build:
+      context: ./frontend
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./frontend/src:/app/src
+      - ./frontend/public:/app/public
+    environment:
+      NEXT_PUBLIC_API_URL: "http://localhost:8000"
+      WATCHPACK_POLLING: "true"
+    depends_on:
+      - nginx
+    restart: unless-stopped
 
 volumes:
   postgres_data:
