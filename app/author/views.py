@@ -4,14 +4,15 @@ from rest_framework.views import APIView
 from .models import (
     AuthorModel, BlogPostModel, Follow, Comment,
     Reaction, Notification, Citation, PostVersion, PostReview,
-    Report, ModerationAuditLog,
+    Report, ModerationAuditLog, Tag, Bookmark, Series, SeriesPost, Block, PostView, CoAuthor, NewsletterSubscription,
 )
 from .serializers import (
     AuthorSerializer, BlogPostSerializer, PublicPostSerializer,
     PostImageSerializer, UserRegistrationSerializer,
     UserProfileSerializer, UserPublicProfileSerializer,
     CommentSerializer, NotificationSerializer, CitationSerializer,
-    PostVersionSerializer, PostReviewSerializer,
+    PostVersionSerializer, PostReviewSerializer, TagSerializer, BookmarkSerializer,
+    SeriesSerializer,
 )
 from rest_framework.permissions import BasePermission, AllowAny, IsAuthenticated
 from .throttles import RegisterThrottle, CommentThrottle, FollowThrottle, EvidenceThrottle
@@ -46,16 +47,25 @@ class PublicPostListView(generics.ListAPIView):
     serializer_class = PublicPostSerializer
     permission_classes = [AllowAny]
     pagination_class = StandardPagination
-    filter_backends = [filters.SearchFilter, filters.OrderingFilter]
-    search_fields = ['title', 'content']
+    filter_backends = [filters.OrderingFilter]
     ordering_fields = ['published_at', 'created_at']
     ordering = ['-published_at']
 
     def get_queryset(self):
-        return BlogPostModel.objects.filter(
+        from django.contrib.postgres.search import SearchVector, SearchQuery, SearchRank
+        qs = BlogPostModel.objects.filter(
             status=BlogPostModel.Status.PUBLISHED,
             visibility=BlogPostModel.Visibility.PUBLIC,
-        ).select_related('author', 'user').prefetch_related('reactions')
+        ).select_related('author', 'user').prefetch_related('reactions', 'tags')
+        tag_slug = self.request.query_params.get('tag')
+        if tag_slug:
+            qs = qs.filter(tags__slug=tag_slug)
+        search = self.request.query_params.get('search')
+        if search:
+            vector = SearchVector('title', weight='A') + SearchVector('content', weight='B')
+            query = SearchQuery(search)
+            qs = qs.annotate(rank=SearchRank(vector, query)).filter(rank__gt=0.01).order_by('-rank')
+        return qs
 
     def list(self, request, *args, **kwargs):
         from django.core.cache import cache
@@ -86,7 +96,7 @@ class PublicProfilePostsView(generics.ListAPIView):
             user=user,
             status=BlogPostModel.Status.PUBLISHED,
             visibility=BlogPostModel.Visibility.PUBLIC,
-        ).select_related('author', 'user')
+        ).select_related('author', 'user').prefetch_related('tags').order_by('-pinned', '-published_at')
 
 
 class UserPublicProfileView(generics.RetrieveAPIView):
@@ -417,11 +427,444 @@ class BlogPostViews(viewsets.ModelViewSet):
         parser_classes=[MultiPartParser, FormParser],
     )
     def upload_image(self, request, pk=None):
+        import io
+        from PIL import Image as PILImage
+        from django.core.files.uploadedfile import InMemoryUploadedFile
         post = self.get_object()
+        image_file = request.FILES.get('image')
+        if image_file:
+            img = PILImage.open(image_file)
+            max_width = 1200
+            if img.width > max_width:
+                ratio = max_width / img.width
+                new_size = (max_width, int(img.height * ratio))
+                img = img.resize(new_size, PILImage.LANCZOS)
+            buf = io.BytesIO()
+            img_format = img.format or 'JPEG'
+            img.save(buf, format=img_format)
+            buf.seek(0)
+            optimized = InMemoryUploadedFile(
+                buf, 'image', image_file.name, image_file.content_type,
+                buf.getbuffer().nbytes, None,
+            )
+            request.FILES['image'] = optimized
         serializer = self.get_serializer(post, data=request.data)
-
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data, status=status.HTTP_200_OK)
-
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class TagListCreateView(generics.ListCreateAPIView):
+    serializer_class = TagSerializer
+    queryset = Tag.objects.all()
+
+    def get_permissions(self):
+        if self.request.method == 'GET':
+            return [AllowAny()]
+        return [IsAuthenticated()]
+
+
+class PostTagView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, post_id):
+        from django.shortcuts import get_object_or_404
+        post = get_object_or_404(BlogPostModel, pk=post_id, user=request.user)
+        tag_id = request.data.get('tag_id')
+        tag = get_object_or_404(Tag, pk=tag_id)
+        post.tags.add(tag)
+        return Response(TagSerializer(tag).data)
+
+    def delete(self, request, post_id, tag_id):
+        from django.shortcuts import get_object_or_404
+        post = get_object_or_404(BlogPostModel, pk=post_id, user=request.user)
+        tag = get_object_or_404(Tag, pk=tag_id)
+        post.tags.remove(tag)
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class BookmarkView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, pk):
+        from django.shortcuts import get_object_or_404
+        post = get_object_or_404(BlogPostModel, pk=pk)
+        obj, created = Bookmark.objects.get_or_create(user=request.user, post=post)
+        if created:
+            return Response(BookmarkSerializer(obj).data, status=status.HTTP_201_CREATED)
+        return Response(BookmarkSerializer(obj).data, status=status.HTTP_200_OK)
+
+    def delete(self, request, pk):
+        from django.shortcuts import get_object_or_404
+        post = get_object_or_404(BlogPostModel, pk=pk)
+        bookmark = Bookmark.objects.filter(user=request.user, post=post).first()
+        if not bookmark:
+            return Response(status=status.HTTP_404_NOT_FOUND)
+        bookmark.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class BookmarkListView(generics.ListAPIView):
+    serializer_class = BookmarkSerializer
+    permission_classes = [IsAuthenticated]
+    pagination_class = StandardPagination
+
+    def get_queryset(self):
+        return Bookmark.objects.filter(user=self.request.user).select_related('post').order_by('-created_at')
+
+
+class IsSeriesOwner(BasePermission):
+    def has_object_permission(self, request, view, obj):
+        return obj.owner == request.user
+
+
+class SeriesListCreateView(generics.ListCreateAPIView):
+    serializer_class = SeriesSerializer
+    pagination_class = StandardPagination
+
+    def get_permissions(self):
+        if self.request.method == 'GET':
+            return [AllowAny()]
+        return [IsAuthenticated()]
+
+    def get_queryset(self):
+        return Series.objects.all()
+
+    def perform_create(self, serializer):
+        serializer.save(owner=self.request.user)
+
+
+class SeriesDetailView(generics.RetrieveUpdateDestroyAPIView):
+    serializer_class = SeriesSerializer
+    queryset = Series.objects.all()
+
+    def get_permissions(self):
+        if self.request.method in ('PUT', 'PATCH', 'DELETE'):
+            return [IsAuthenticated(), IsSeriesOwner()]
+        return [AllowAny()]
+
+
+class SeriesPostView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, series_id):
+        from django.shortcuts import get_object_or_404
+        series = get_object_or_404(Series, pk=series_id, owner=request.user)
+        post_id = request.data.get('post_id')
+        order = request.data.get('order', 0)
+        post = get_object_or_404(BlogPostModel, pk=post_id, user=request.user)
+        obj, _ = SeriesPost.objects.get_or_create(series=series, post=post, defaults={'order': order})
+        return Response({'series_id': series.id, 'post_id': post.id, 'order': obj.order}, status=201)
+
+    def delete(self, request, series_id):
+        from django.shortcuts import get_object_or_404
+        series = get_object_or_404(Series, pk=series_id, owner=request.user)
+        post_id = request.data.get('post_id')
+        SeriesPost.objects.filter(series=series, post_id=post_id).delete()
+        return Response(status=204)
+
+
+class TrendingPostsView(generics.ListAPIView):
+    serializer_class = PublicPostSerializer
+    permission_classes = [AllowAny]
+    pagination_class = StandardPagination
+
+    def get_queryset(self):
+        from django.db.models import Count
+        from django.utils import timezone
+        from datetime import timedelta
+
+        cutoff = timezone.now() - timedelta(days=30)
+        return BlogPostModel.objects.filter(
+            status=BlogPostModel.Status.PUBLISHED,
+            visibility=BlogPostModel.Visibility.PUBLIC,
+            published_at__gte=cutoff,
+        ).annotate(
+            reaction_cnt=Count('reactions', distinct=True),
+            comment_cnt=Count('comments', distinct=True),
+        ).order_by('-reaction_cnt', '-comment_cnt', '-published_at').select_related('author', 'user').prefetch_related('reactions', 'tags')
+
+
+class PostPinView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, pk):
+        from django.shortcuts import get_object_or_404
+        post = get_object_or_404(BlogPostModel, pk=pk, user=request.user)
+        BlogPostModel.objects.filter(user=request.user, pinned=True).update(pinned=False)
+        post.pinned = True
+        post.save(update_fields=['pinned'])
+        return Response({'pinned': True})
+
+    def delete(self, request, pk):
+        from django.shortcuts import get_object_or_404
+        post = get_object_or_404(BlogPostModel, pk=pk, user=request.user)
+        post.pinned = False
+        post.save(update_fields=['pinned'])
+        return Response({'pinned': False})
+
+
+class BlockView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, pk):
+        from django.contrib.auth import get_user_model
+        from django.shortcuts import get_object_or_404
+        User = get_user_model()
+        target = get_object_or_404(User, pk=pk)
+        if target == request.user:
+            return Response({'detail': 'Cannot block yourself.'}, status=400)
+        Block.objects.get_or_create(blocker=request.user, blocked=target)
+        return Response({'detail': 'Blocked.'}, status=201)
+
+    def delete(self, request, pk):
+        Block.objects.filter(blocker=request.user, blocked_id=pk).delete()
+        return Response(status=204)
+
+
+class PostViewCountView(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request, pk):
+        import hashlib
+        from django.shortcuts import get_object_or_404
+        post = get_object_or_404(BlogPostModel, pk=pk, status=BlogPostModel.Status.PUBLISHED)
+        ip = request.META.get('REMOTE_ADDR', '')
+        ip_hash = hashlib.sha256(ip.encode()).hexdigest()
+        PostView.objects.get_or_create(post=post, ip_hash=ip_hash)
+        return Response({'view_count': post.view_count})
+
+
+class CoAuthorView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, pk):
+        from django.shortcuts import get_object_or_404
+        from django.contrib.auth import get_user_model
+        User = get_user_model()
+        post = get_object_or_404(BlogPostModel, pk=pk, user=request.user)
+        user_id = request.data.get('user_id')
+        target = get_object_or_404(User, pk=user_id)
+        if target == request.user:
+            return Response({'detail': 'Cannot add yourself as co-author.'}, status=status.HTTP_400_BAD_REQUEST)
+        CoAuthor.objects.get_or_create(post=post, user=target)
+        return Response({'post_id': post.id, 'co_author': target.handle}, status=status.HTTP_201_CREATED)
+
+    def delete(self, request, pk):
+        from django.shortcuts import get_object_or_404
+        post = get_object_or_404(BlogPostModel, pk=pk, user=request.user)
+        user_id = request.data.get('user_id')
+        CoAuthor.objects.filter(post=post, user_id=user_id).delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class OpenGraphView(APIView):
+    permission_classes = [AllowAny]
+
+    def get(self, request, slug):
+        from django.shortcuts import get_object_or_404
+        post = get_object_or_404(
+            BlogPostModel,
+            slug=slug,
+            status=BlogPostModel.Status.PUBLISHED,
+            visibility=BlogPostModel.Visibility.PUBLIC,
+        )
+        description = post.content[:160].strip()
+        return Response({
+            'og_title': post.title,
+            'og_description': description,
+            'og_url': f"/posts/{post.slug}/",
+            'og_author': post.user.handle,
+            'og_image': request.build_absolute_uri(post.image.url) if post.image else None,
+            'og_type': 'article',
+            'og_published_time': post.published_at,
+        })
+
+
+class UserStatsView(APIView):
+    permission_classes = [AllowAny]
+
+    def get(self, request, pk):
+        from django.shortcuts import get_object_or_404
+        from django.contrib.auth import get_user_model
+        from django.db.models import Count
+        User = get_user_model()
+        user = get_object_or_404(User, pk=pk)
+        total_posts = BlogPostModel.objects.filter(user=user, status=BlogPostModel.Status.PUBLISHED).count()
+        total_reactions = Reaction.objects.filter(post__user=user).count()
+        total_comments = Comment.objects.filter(post__user=user).count()
+        follower_count = Follow.objects.filter(following=user).count()
+        following_count = Follow.objects.filter(follower=user).count()
+        subscriber_count = NewsletterSubscription.objects.filter(author=user).count()
+        return Response({
+            'user_id': user.id,
+            'handle': user.handle,
+            'total_posts': total_posts,
+            'total_reactions': total_reactions,
+            'total_comments': total_comments,
+            'follower_count': follower_count,
+            'following_count': following_count,
+            'subscriber_count': subscriber_count,
+        })
+
+
+class SubscribeView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, pk):
+        from django.shortcuts import get_object_or_404
+        from django.contrib.auth import get_user_model
+        User = get_user_model()
+        author = get_object_or_404(User, pk=pk)
+        if author == request.user:
+            return Response({'detail': 'Cannot subscribe to yourself.'}, status=status.HTTP_400_BAD_REQUEST)
+        obj, created = NewsletterSubscription.objects.get_or_create(subscriber=request.user, author=author)
+        if created:
+            return Response({'detail': 'Subscribed.'}, status=status.HTTP_201_CREATED)
+        return Response({'detail': 'Already subscribed.'}, status=status.HTTP_200_OK)
+
+    def delete(self, request, pk):
+        NewsletterSubscription.objects.filter(subscriber=request.user, author_id=pk).delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class SubscriptionListView(generics.ListAPIView):
+    permission_classes = [IsAuthenticated]
+    pagination_class = StandardPagination
+
+    def get_queryset(self):
+        return NewsletterSubscription.objects.filter(subscriber=self.request.user).select_related('author')
+
+    def list(self, request, *args, **kwargs):
+        qs = self.get_queryset()
+        page = self.paginate_queryset(qs)
+        data = [{'id': s.id, 'author_id': s.author.id, 'handle': s.author.handle, 'created_at': s.created_at} for s in (page or qs)]
+        if page is not None:
+            return self.get_paginated_response(data)
+        return Response(data)
+
+
+class DataExportView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        user = request.user
+        posts = list(BlogPostModel.objects.filter(user=user).values(
+            'id', 'title', 'slug', 'status', 'visibility', 'created_at', 'published_at'
+        ))
+        comments = list(Comment.objects.filter(user=user).values(
+            'id', 'post_id', 'body', 'created_at'
+        ))
+        bookmarks = list(Bookmark.objects.filter(user=user).select_related('post').values(
+            'id', 'post__title', 'post__slug', 'created_at'
+        ))
+        follows = list(Follow.objects.filter(follower=user).select_related('following').values_list(
+            'following__handle', flat=True
+        ))
+        return Response({
+            'username': user.username,
+            'handle': user.handle,
+            'email': user.email,
+            'posts': posts,
+            'comments': comments,
+            'bookmarks': bookmarks,
+            'follows': list(follows),
+        })
+
+
+# ---------------------------------------------------------------------------
+# Health check — used by load balancers, uptime monitors, and CI smoke tests
+# ---------------------------------------------------------------------------
+class HealthCheckView(APIView):
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+        from django.db import connection
+        from django.core.cache import cache
+
+        checks = {}
+        overall = "ok"
+
+        # Database
+        try:
+            connection.ensure_connection()
+            checks['db'] = 'ok'
+        except Exception:
+            checks['db'] = 'error'
+            overall = 'degraded'
+
+        # Cache (Redis)
+        try:
+            cache.set('_health', 1, timeout=5)
+            assert cache.get('_health') == 1
+            checks['cache'] = 'ok'
+        except Exception:
+            checks['cache'] = 'error'
+            overall = 'degraded'
+
+        http_status = status.HTTP_200_OK if overall == 'ok' else status.HTTP_503_SERVICE_UNAVAILABLE
+        return Response(
+            {'status': overall, 'version': '1.0.0', **checks},
+            status=http_status,
+        )
+
+
+# ---------------------------------------------------------------------------
+# GDPR — Right to erasure (account deletion)
+# ---------------------------------------------------------------------------
+class AccountDeleteView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def delete(self, request):
+        user = request.user
+        user.delete()
+        return Response(
+            {'detail': 'Account and all associated data have been permanently deleted.'},
+            status=status.HTTP_204_NO_CONTENT,
+        )
+
+
+# ---------------------------------------------------------------------------
+# Notifications — mark all as read
+# ---------------------------------------------------------------------------
+class MarkNotificationsReadView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def patch(self, request):
+        count = Notification.objects.filter(
+            recipient=request.user, is_read=False
+        ).update(is_read=True)
+        return Response({'marked_read': count})
+
+
+# ---------------------------------------------------------------------------
+# Me — full authenticated user profile + stats in a single request
+# ---------------------------------------------------------------------------
+class MeView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        from django.db.models import Count
+        user = request.user
+        total_posts = BlogPostModel.objects.filter(user=user, status=BlogPostModel.Status.PUBLISHED).count()
+        total_reactions = Reaction.objects.filter(post__user=user).count()
+        total_comments = Comment.objects.filter(post__user=user).count()
+        follower_count = Follow.objects.filter(following=user).count()
+        following_count = Follow.objects.filter(follower=user).count()
+        unread_notifications = Notification.objects.filter(recipient=user, is_read=False).count()
+        return Response({
+            'id': user.id,
+            'username': user.username,
+            'handle': user.handle,
+            'email': user.email,
+            'date_joined': user.date_joined,
+            'stats': {
+                'total_posts': total_posts,
+                'total_reactions': total_reactions,
+                'total_comments': total_comments,
+                'follower_count': follower_count,
+                'following_count': following_count,
+                'unread_notifications': unread_notifications,
+            },
+        })

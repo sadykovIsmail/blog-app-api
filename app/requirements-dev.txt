@@ -1,0 +1,7 @@
+# Development & CI-only tools — not installed in the production Docker image
+-r requirements.txt
+
+flake8==7.1.1
+black==24.10.0
+bandit==1.8.3
+safety==3.2.14

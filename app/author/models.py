@@ -3,6 +3,35 @@ from django.conf import settings
 from django.utils.text import slugify
 
 
+class Bookmark(models.Model):
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='bookmarks',
+    )
+    post = models.ForeignKey(
+        'BlogPostModel', on_delete=models.CASCADE, related_name='bookmarks',
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('user', 'post')
+
+    def __str__(self):
+        return f"{self.user} bookmarked {self.post}"
+
+
+class Tag(models.Model):
+    name = models.CharField(max_length=50, unique=True)
+    slug = models.SlugField(max_length=60, unique=True, blank=True)
+
+    def save(self, *args, **kwargs):
+        if not self.slug:
+            self.slug = slugify(self.name)
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return self.name
+
+
 class Follow(models.Model):
     follower = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="following",
@@ -228,6 +257,8 @@ class BlogPostModel(models.Model):
     slug = models.SlugField(max_length=270, unique=True, blank=True)
     published_at = models.DateTimeField(null=True, blank=True)
     scheduled_for = models.DateTimeField(null=True, blank=True)
+    tags = models.ManyToManyField(Tag, blank=True, related_name='posts')
+    pinned = models.BooleanField(default=False)
 
     class Meta:
         indexes = [
@@ -252,5 +283,94 @@ class BlogPostModel(models.Model):
             n += 1
         return slug
 
+    @property
+    def view_count(self):
+        return self.post_views.count()
+
     def __str__(self):
         return self.title
+
+
+class NewsletterSubscription(models.Model):
+    subscriber = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='subscriptions',
+    )
+    author = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='subscribers',
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('subscriber', 'author')
+
+    def __str__(self):
+        return f"{self.subscriber} subscribed to {self.author}"
+
+
+class CoAuthor(models.Model):
+    post = models.ForeignKey('BlogPostModel', on_delete=models.CASCADE, related_name='co_authors')
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='co_authored_posts')
+    added_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('post', 'user')
+
+    def __str__(self):
+        return f"{self.user} co-author of {self.post}"
+
+
+class PostView(models.Model):
+    post = models.ForeignKey('BlogPostModel', on_delete=models.CASCADE, related_name='post_views')
+    ip_hash = models.CharField(max_length=64)
+    viewed_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('post', 'ip_hash')
+
+
+class Block(models.Model):
+    blocker = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='blocking')
+    blocked = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='blocked_by')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('blocker', 'blocked')
+
+    def __str__(self):
+        return f"{self.blocker} blocked {self.blocked}"
+
+
+class Series(models.Model):
+    owner = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='series')
+    title = models.CharField(max_length=200)
+    slug = models.SlugField(max_length=220, unique=True, blank=True)
+    description = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def save(self, *args, **kwargs):
+        if not self.slug:
+            from django.utils.text import slugify
+            base = slugify(self.title)
+            slug = base
+            n = 1
+            while Series.objects.filter(slug=slug).exists():
+                slug = f"{base}-{n}"
+                n += 1
+            self.slug = slug
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return self.title
+
+
+class SeriesPost(models.Model):
+    series = models.ForeignKey(Series, on_delete=models.CASCADE, related_name='series_posts')
+    post = models.ForeignKey('BlogPostModel', on_delete=models.CASCADE, related_name='series_posts')
+    order = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        unique_together = ('series', 'post')
+        ordering = ['order']
+
+    def __str__(self):
+        return f"{self.series} - {self.post}"

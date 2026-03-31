@@ -25,16 +25,29 @@ from rest_framework_simplejwt.views import (
 )
 from author.views import (
     RegisterView, ProfileView, PublicPostListView, PublicProfilePostsView,
+    TagListCreateView, PostTagView, BookmarkView, BookmarkListView,
     FollowView, UnfollowView, UserPublicProfileView,
     PostCommentListCreateView, CommentDetailView,
     PostReactView, CommentReactView, NotificationListView,
     CitationListCreateView, CitationDetailView, EvidencePanelView,
     PostChangelogView, PostReviewListCreateView,
     ReportPostView, ReportCommentView, HideCommentView,
+    SeriesListCreateView, SeriesDetailView, SeriesPostView,
+    BlockView, PostPinView, TrendingPostsView,
+    PostViewCountView, CoAuthorView, OpenGraphView, UserStatsView,
+    SubscribeView, SubscriptionListView,
+    DataExportView, HealthCheckView, AccountDeleteView,
+    MarkNotificationsReadView, MeView,
 )
+from author.feeds import LatestPostsFeed, AuthorPostsFeed
+from django.contrib.sitemaps.views import sitemap
+from author.sitemaps import PostSitemap
+
+sitemaps = {'posts': PostSitemap}
 
 urlpatterns = [
     path('admin/', admin.site.urls),
+    path('api/v1/', include('core.urls_v1')),
     path('api/', include('author.urls')),
     path('api/schema/', SpectacularAPIView.as_view(), name='schema'),
     path('api/docs/', SpectacularSwaggerView.as_view(url_name='schema'), name='swagger-ui'),
@@ -42,8 +55,14 @@ urlpatterns = [
     path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
     path('api/auth/register/', RegisterView.as_view(), name='register'),
     path('api/auth/profile/', ProfileView.as_view(), name='profile'),
+    path('api/public/posts/trending/', TrendingPostsView.as_view(), name='trending-posts'),
     path('api/public/posts/', PublicPostListView.as_view(), name='public-post-list'),
     path('api/public/profiles/<str:handle>/posts/', PublicProfilePostsView.as_view(), name='public-profile-posts'),
+    path('api/tags/', TagListCreateView.as_view(), name='tag-list'),
+    path('api/posts/<int:post_id>/tags/', PostTagView.as_view(), name='post-tag-add'),
+    path('api/posts/<int:post_id>/tags/<int:tag_id>/', PostTagView.as_view(), name='post-tag-remove'),
+    path('api/posts/<int:pk>/bookmark/', BookmarkView.as_view(), name='bookmark'),
+    path('api/bookmarks/', BookmarkListView.as_view(), name='bookmark-list'),
     path('api/users/<int:pk>/', UserPublicProfileView.as_view(), name='profile-detail'),
     path('api/users/<int:pk>/follow/', FollowView.as_view(), name='follow'),
     path('api/users/<int:pk>/unfollow/', UnfollowView.as_view(), name='unfollow'),
@@ -60,4 +79,23 @@ urlpatterns = [
     path('api/posts/<int:pk>/report/', ReportPostView.as_view(), name='report-post'),
     path('api/comments/<int:pk>/report/', ReportCommentView.as_view(), name='report-comment'),
     path('api/comments/<int:pk>/hide/', HideCommentView.as_view(), name='hide-comment'),
+    path('api/series/', SeriesListCreateView.as_view(), name='series-list'),
+    path('api/series/<int:pk>/', SeriesDetailView.as_view(), name='series-detail'),
+    path('api/series/<int:series_id>/posts/', SeriesPostView.as_view(), name='series-posts'),
+    path('api/users/<int:pk>/block/', BlockView.as_view(), name='block'),
+    path('api/posts/<int:pk>/pin/', PostPinView.as_view(), name='post-pin'),
+    path('api/posts/<int:pk>/view/', PostViewCountView.as_view(), name='post-view'),
+    path('api/posts/<int:pk>/co-authors/', CoAuthorView.as_view(), name='co-authors'),
+    path('api/public/posts/<slug:slug>/og/', OpenGraphView.as_view(), name='post-og'),
+    path('api/users/<int:pk>/stats/', UserStatsView.as_view(), name='user-stats'),
+    path('api/users/<int:pk>/subscribe/', SubscribeView.as_view(), name='subscribe'),
+    path('api/subscriptions/', SubscriptionListView.as_view(), name='subscription-list'),
+    path('api/auth/export/', DataExportView.as_view(), name='data-export'),
+    path('api/auth/account/', AccountDeleteView.as_view(), name='account-delete'),
+    path('api/auth/me/', MeView.as_view(), name='me'),
+    path('api/notifications/mark-read/', MarkNotificationsReadView.as_view(), name='notifications-mark-read'),
+    path('api/health/', HealthCheckView.as_view(), name='health'),
+    path('feed/', LatestPostsFeed(), name='rss-feed'),
+    path('feed/<str:handle>/', AuthorPostsFeed(), name='author-rss-feed'),
+    path('sitemap.xml', sitemap, {'sitemaps': sitemaps}, name='django.contrib.sitemaps.views.sitemap'),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

@@ -1,698 +1,399 @@
 <div align="center">
 
-# Blog App API
+# Blog Platform API
 
-### Project 3 of 3 — Full-Featured Blog Platform with Image Uploads
+### Production-grade REST API — Django · PostgreSQL · Redis · Celery · Docker
 
+[![CI](https://github.com/yourusername/blog-app-api/actions/workflows/ci.yml/badge.svg)](https://github.com/yourusername/blog-app-api/actions)
+[![Coverage](https://codecov.io/gh/yourusername/blog-app-api/branch/main/graph/badge.svg)](https://codecov.io/gh/yourusername/blog-app-api)
 [![Python](https://img.shields.io/badge/Python-3.12-3776AB?style=flat-square&logo=python&logoColor=white)](https://www.python.org/)
 [![Django](https://img.shields.io/badge/Django-5.2-092E20?style=flat-square&logo=django&logoColor=white)](https://www.djangoproject.com/)
 [![DRF](https://img.shields.io/badge/DRF-3.16-ff1709?style=flat-square)](https://www.django-rest-framework.org/)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-316192?style=flat-square&logo=postgresql&logoColor=white)](https://www.postgresql.org/)
+[![Redis](https://img.shields.io/badge/Redis-7-DC382D?style=flat-square&logo=redis&logoColor=white)](https://redis.io/)
+[![Celery](https://img.shields.io/badge/Celery-5.4-37814A?style=flat-square&logo=celery&logoColor=white)](https://docs.celeryq.dev/)
 [![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?style=flat-square&logo=docker&logoColor=white)](https://www.docker.com/)
+[![Sentry](https://img.shields.io/badge/Sentry-Monitored-362D59?style=flat-square&logo=sentry&logoColor=white)](https://sentry.io/)
 [![JWT](https://img.shields.io/badge/Auth-JWT-000000?style=flat-square&logo=jsonwebtokens&logoColor=white)](https://jwt.io/)
 [![Swagger](https://img.shields.io/badge/Docs-Swagger_UI-85EA2D?style=flat-square&logo=swagger&logoColor=black)](https://swagger.io/)
+[![License](https://img.shields.io/badge/License-MIT-yellow?style=flat-square)](LICENSE)
 
-**The most feature-complete project in this series — a full blog platform API with author profiles, blog posts, cover image uploads, custom object-level permissions, and a production-ready Docker stack.**
+**A full-featured, production-hardened blog platform REST API. 50+ test files, async task queue, Redis caching, structured JSON logging, GDPR compliance, and a 4-stage CI/CD pipeline.**
+
+[Quick Start](#quick-start) · [API Docs](#api-documentation) · [Architecture](#architecture) · [Tech Stack](#tech-stack) · [Features](#features) · [Testing](#testing)
 
 </div>
 
 ---
 
-## Table of Contents
+## Quick Start
 
-- [Overview](#overview)
-- [Features](#features)
-- [Project Architecture](#project-architecture)
-- [Folder Structure](#folder-structure)
-- [Data Models](#data-models)
-- [API Endpoints](#api-endpoints)
-- [Authentication](#authentication)
-- [Image Upload](#image-upload)
-- [Permissions](#permissions)
-- [Docker Setup](#docker-setup)
-- [Local Development](#local-development)
-- [Example Requests](#example-requests)
-- [Example Responses](#example-responses)
-- [Environment Variables](#environment-variables)
-- [Future Improvements](#future-improvements)
+```bash
+# 1. Clone and enter the project
+git clone https://github.com/yourusername/blog-app-api.git
+cd blog-app-api
+
+# 2. Create your environment file
+cp .env.example .env
+# Edit .env — set SECRET_KEY to a long random string
+
+# 3. Start the full stack (Django + PostgreSQL + Redis + Celery + Nginx)
+docker compose up --build
+
+# 4. Create a superuser (in a second terminal)
+docker compose exec web python manage.py createsuperuser
+
+# 5. Open the interactive API explorer
+open http://localhost:8000/api/v1/docs/
+```
+
+That's it. The stack auto-runs migrations, collects static files, and starts all services.
 
 ---
 
-## Overview
+## Architecture
 
-The Blog App API is the most complete project in this series. It builds a realistic blog platform backend with two related resources — **Authors** and **Blog Posts** — with full CRUD, JWT authentication, custom object-level permissions, and a dedicated image upload endpoint.
+```
+┌──────────────────────────────────────────────────────────────┐
+│                        Docker Compose                        │
+│                                                              │
+│  ┌─────────┐   ┌──────────────────────────────────────────┐ │
+│  │  nginx  │──▶│                  web                     │ │
+│  │ :80     │   │   Django 5.2 + Gunicorn (4 workers)      │ │
+│  │ (Alpine)│   └──────────────┬─────────────┬─────────────┘ │
+│  └─────────┘                  │             │               │
+│       │             ┌─────────▼──┐   ┌──────▼───────┐      │
+│       │ /static/    │ PostgreSQL │   │    Redis 7   │      │
+│       │ /media/     │    :5432   │   │    :6379     │      │
+│       │ volumes     └────────────┘   └──────┬───────┘      │
+│                                             │               │
+│                           ┌─────────────────┼────────────┐  │
+│                           │  celery-worker  │ celery-beat│  │
+│                           │  (4 concurrency)│ (scheduler)│  │
+│                           └─────────────────┴────────────┘  │
+└──────────────────────────────────────────────────────────────┘
+```
 
-Beyond what was introduced in Project 2, this project adds:
-- **Image upload** to a custom endpoint using `MultiPartParser` and `FormParser`
-- **`ImageField`** on a model with Pillow image processing
-- **Custom permission class** (`IsOwner`) for object-level authorization
-- **WhiteNoise** for efficient static file serving
-- **Production-tuned Docker setup** with `python:3.12-slim` for smaller image size
-- **`DEBUG` toggled via environment variable** for proper prod/dev switching
+### Request Lifecycle
+
+```
+Client → Nginx → Gunicorn → RequestIDMiddleware
+                          → CorsMiddleware
+                          → Django Router
+                          → View (JWT auth + permissions)
+                          → ORM (PostgreSQL)
+                          → Redis (cache layer)
+                          → JSON Response (with X-Request-ID header)
+```
+
+---
+
+## Tech Stack
+
+| Layer | Technology | Why |
+|---|---|---|
+| Framework | Django 5.2 + DRF 3.16 | Battle-tested, mature ecosystem |
+| Database | PostgreSQL 16 | Full-text search, ACID transactions, JSON fields |
+| Cache / Broker | Redis 7 | Sub-millisecond reads, pub/sub, Celery broker |
+| Async Tasks | Celery 5.4 + django-celery-beat | Scheduled jobs, email, link health |
+| Auth | JWT (SimpleJWT) | Stateless, scalable, industry standard |
+| Error Tracking | Sentry SDK | Real-time error alerts + performance tracing |
+| API Docs | drf-spectacular (Swagger UI) | Auto-generated, interactive OpenAPI 3.0 |
+| WSGI Server | Gunicorn | Production-grade multi-worker server |
+| Reverse Proxy | Nginx Alpine | Static/media serving, security headers |
+| Containerisation | Docker Compose | Single-command reproducible environment |
+| CI/CD | GitHub Actions (4 jobs) | Lint → Security → Tests → Docker build |
+| Testing | pytest + factory_boy + pytest-cov | Industry-standard, 75%+ coverage enforced |
+| Search | PostgreSQL Full-Text Search | No extra service — `SearchVector` + `SearchRank` |
 
 ---
 
 ## Features
 
-- Full **CRUD** for **Authors** and **Blog Posts**
-- **Image upload** for post cover photos via a dedicated `POST /api/posts/{id}/upload-image/` action
-  - Accepts `multipart/form-data` — powered by `MultiPartParser` + `FormParser`
-  - Images stored under `media/posts/` directory
-  - Served via Nginx at `/media/` URL path
-- **Custom `IsOwner` permission** — object-level check ensures only the owner can modify their resource
-- **Per-user data scoping** on both authors and posts via `get_queryset()` overrides
-- **Auto-user assignment** in `perform_create()` — the `user` field is set server-side
-- **JWT authentication** (SimpleJWT) — access: 1h, refresh: 7d
-- **Interactive Swagger UI** at `/api/docs/` via `drf-spectacular`
-- **Dockerized** production stack: PostgreSQL 16 + Gunicorn + Nginx
-- **WhiteNoise** for static file serving
-- **`.env`-based configuration** with `python-dotenv`
-- PostgreSQL **health check** — Django starts only when database is ready
-- **`python:3.12-slim`** base image — smaller, faster builds vs full Python image
+<details>
+<summary><strong>Content & Publishing</strong></summary>
+
+- Blog posts with **status machine**: `DRAFT → SCHEDULED → PUBLISHED → ARCHIVED`
+- **Visibility controls**: `PUBLIC` / `UNLISTED`
+- **Scheduled publishing** — set `scheduled_for`; Celery Beat auto-publishes every 5 min
+- **Post versioning** — every edit creates a `PostVersion` snapshot with diff reason
+- **Image uploads** with automatic resize to max 1200 px width (Pillow)
+- **Rich metadata**: reading time, view count, reaction count, co-authors, tags
+- **Unique auto-slug** generation with collision handling
+- **Content linting** — max 20 external links enforced on published posts
+
+</details>
+
+<details>
+<summary><strong>Social & Community</strong></summary>
+
+- **Follows / Unfollow** with notification on follow
+- **Block users** — blocks filter feed and interactions
+- **Reactions** on posts and comments (toggle)
+- **Nested comments** with parent reply threading
+- **Bookmarks** — personal reading list
+- **Co-authors** — invite collaborators to a post
+- **Post series** — curated ordered collections of posts
+- **Pin posts** — highlight one post per user profile
+
+</details>
+
+<details>
+<summary><strong>Notifications & Subscriptions</strong></summary>
+
+- Real-time notification model for: `follow`, `comment`, `reply`, `citation_dead`, `citation_drift`
+- **Mark all read** in a single PATCH request
+- **Newsletter subscriptions** — follow an author's feed
+- **RSS feeds** (Atom 1.0) — per-author and global latest posts
+- **XML Sitemap** for SEO (`/sitemap.xml`)
+
+</details>
+
+<details>
+<summary><strong>Discovery & Search</strong></summary>
+
+- **PostgreSQL full-text search** with `SearchVector` on title (weight A) + content (weight B)
+- **Ranked results** via `SearchRank` with minimum relevance threshold
+- **Tag filtering** by slug
+- **Trending posts** — ranked by reactions + comments in last 30 days
+- **Public feed** with Redis caching (30-second TTL on page 1)
+- **OpenGraph metadata** endpoint per post slug
+
+</details>
+
+<details>
+<summary><strong>Citations & Evidence</strong></summary>
+
+- **Citations panel** — attach external URLs to posts as sourced evidence
+- **Automated link health checks** (Celery Beat, daily 02:00 UTC)
+  - Detects dead links (4xx / 5xx / timeouts)
+  - Detects content drift (ETag / Last-Modified hash comparison)
+  - Notifies post authors automatically
+
+</details>
+
+<details>
+<summary><strong>Moderation</strong></summary>
+
+- **Report posts and comments** with reason
+- **Staff-only hide comment** endpoint
+- **ModerationAuditLog** — immutable record of every staff action
+- **Post reviews** — 1–5 star peer review system
+
+</details>
+
+<details>
+<summary><strong>Security & Compliance</strong></summary>
+
+- **SECRET_KEY** enforced via env var — raises `ImproperlyConfigured` if missing
+- **ALLOWED_HOSTS** from env var — no `["*"]` in any environment
+- **HSTS** (1 year + preload), **CSRF/session secure cookies** in production
+- **CORS** controlled per-origin via `CORS_ALLOWED_ORIGINS`
+- **Security headers** via Django + Nginx (`X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`)
+- **Rate limiting** per endpoint: register (10/min), comments (30/min), follows (20/min)
+- **GDPR right to erasure** — `DELETE /api/auth/account/` permanently deletes all user data
+- **GDPR data export** — `GET /api/auth/export/` returns all user data as JSON
+- **IP hashing** for view counts (SHA-256, never store raw IPs)
+
+</details>
+
+<details>
+<summary><strong>Observability</strong></summary>
+
+- **Sentry** — automatic error capture + 10% transaction sampling (configurable)
+- **Health check endpoint** — `GET /api/v1/health/` checks DB + Redis, returns 503 on degradation
+- **Structured JSON logging** across all services
+- **X-Request-ID** header propagated on every request + response for distributed tracing
+- **Request duration** logged in milliseconds
+
+</details>
 
 ---
 
-## Project Architecture
+## API Documentation
 
-```mermaid
-graph TB
-    Client(["HTTP Client<br/>(Browser / curl / Postman)"])
+Interactive Swagger UI: `http://localhost:8000/api/v1/docs/`
+OpenAPI schema: `http://localhost:8000/api/v1/schema/`
 
-    subgraph Docker Compose
-        subgraph nginx_svc["nginx (Alpine) :80"]
-            NginxProxy["Reverse Proxy"]
-        end
+### Endpoint Summary
 
-        subgraph web_svc["web (python:3.12-slim) :8000"]
-            Gunicorn["Gunicorn"]
-            Django["Django 5.2"]
-        end
+| Category | Count | Example |
+|---|---|---|
+| Auth | 6 | `POST /api/v1/token/`, `GET /api/v1/auth/me/` |
+| Posts (CRUD) | 7 | `GET /api/v1/posts/`, `POST /api/v1/posts/{id}/upload-image/` |
+| Public Feed | 5 | `GET /api/v1/public/posts/`, `GET /api/v1/public/posts/trending/` |
+| Comments | 4 | `POST /api/v1/posts/{id}/comments/`, `PATCH /api/v1/comments/{id}/` |
+| Social | 8 | `POST /api/v1/users/{id}/follow/`, `POST /api/v1/users/{id}/block/` |
+| Citations | 5 | `POST /api/v1/posts/{id}/citations/`, `GET /api/v1/posts/{id}/evidence/` |
+| Tags | 3 | `GET /api/v1/tags/`, `POST /api/v1/posts/{id}/tags/` |
+| Series | 4 | `POST /api/v1/series/`, `POST /api/v1/series/{id}/posts/` |
+| Notifications | 3 | `GET /api/v1/notifications/`, `PATCH /api/v1/notifications/mark-read/` |
+| Moderation | 4 | `POST /api/v1/posts/{id}/report/`, `POST /api/v1/comments/{id}/hide/` |
+| GDPR | 2 | `GET /api/auth/export/`, `DELETE /api/auth/account/` |
+| Feeds & SEO | 3 | `GET /feed/`, `GET /sitemap.xml` |
+| Infra | 1 | `GET /api/v1/health/` |
 
-        subgraph db_svc["db (postgres:16) :5432"]
-            Postgres[("PostgreSQL 16")]
-        end
-
-        subgraph volumes["Named Volumes"]
-            StaticVol[/"static_volume"/]
-            MediaVol[/"media_volume"/]
-            PGVol[/"postgres_data"/]
-        end
-    end
-
-    Client -->|"HTTP :8000"| NginxProxy
-    NginxProxy -->|"/api/ → proxy_pass"| Gunicorn
-    NginxProxy -->|"/static/ → alias"| StaticVol
-    NginxProxy -->|"/media/ → alias"| MediaVol
-    Gunicorn --> Django
-    Django -->|"ORM"| Postgres
-    Postgres --- PGVol
-    Django -.->|"collectstatic"| StaticVol
-    Django -.->|"image upload"| MediaVol
-```
-
-### API Request Flow — Image Upload
-
-```mermaid
-sequenceDiagram
-    actor Client
-    participant Nginx
-    participant Django
-    participant JWT as JWT Middleware
-    participant View as BlogPostViews
-    participant Serializer as PostImageSerializer
-    participant Storage as Media Volume
-
-    Client->>Nginx: POST /api/posts/1/upload-image/<br/>Authorization: Bearer eyJ...<br/>Content-Type: multipart/form-data<br/>image=@cover.jpg
-    Nginx->>Django: Forward multipart request
-    Django->>JWT: Validate JWT token
-    JWT-->>Django: Authenticated user
-    Django->>View: Route to upload_image action
-    View->>View: get_object() → verify ownership
-    View->>Serializer: PostImageSerializer(post, data=request.data)
-    Serializer->>Storage: Save file to media/posts/
-    Storage-->>Serializer: File URL
-    Serializer-->>View: Validated data
-    View-->>Client: 200 OK {"id": 1, "image": "/media/posts/cover.jpg"}
-```
+**Total: 55+ endpoints across 2 versioned URL namespaces (`/api/` and `/api/v1/`).**
 
 ---
 
-## Folder Structure
-
-```
-3. blog_app_api/
-├── app/
-│   ├── core/
-│   │   ├── __init__.py
-│   │   ├── settings.py          # PostgreSQL, JWT, Pillow, WhiteNoise, drf-spectacular
-│   │   ├── urls.py              # JWT + Swagger + author + posts routes
-│   │   ├── wsgi.py
-│   │   └── asgi.py
-│   ├── author/
-│   │   ├── __init__.py
-│   │   ├── apps.py
-│   │   ├── models.py            # AuthorModel + BlogPostModel (ImageField)
-│   │   ├── serializers.py       # AuthorSerializer, BlogPostSerializer, PostImageSerializer
-│   │   ├── views.py             # AuthorViews, BlogPostViews + IsOwner permission
-│   │   ├── urls.py              # DefaultRouter for /author/ and /posts/
-│   │   ├── tests.py
-│   │   └── migrations/
-│   │       ├── __init__.py
-│   │       ├── 0001_initial.py
-│   │       ├── 0002_blogpostmodel_user.py
-│   │       └── 0003_alter_blogpostmodel_user.py
-│   ├── manage.py
-│   └── requirements.txt
-├── docker/
-│   └── nginx/
-│       └── default.conf         # Nginx: proxy_pass + /static/ + /media/ locations
-├── .env                         # Environment variables (not committed in production)
-├── .gitignore
-├── Dockerfile                   # python:3.12-slim + gunicorn + non-root user
-└── docker-compose.yml           # db + web + nginx with health checks + volumes
-```
-
----
-
-## Data Models
-
-### Entity Relationship Diagram
-
-```mermaid
-erDiagram
-    USER {
-        int id PK
-        string username
-        string password
-        string email
-    }
-    AUTHOR {
-        int id PK
-        string name
-        string email
-        datetime created_at
-        int user_id FK
-    }
-    BLOGPOST {
-        int id PK
-        string title
-        text content
-        string image
-        datetime created_at
-        datetime updated_at
-        int author_id FK
-        int user_id FK
-    }
-
-    USER ||--o{ AUTHOR : "owns"
-    USER ||--o{ BLOGPOST : "owns"
-    AUTHOR ||--o{ BLOGPOST : "authors"
-```
-
-### AuthorModel
-
-| Field | Type | Constraints | Notes |
-|-------|------|-------------|-------|
-| `id` | `AutoField` | Primary Key | Auto-generated, read-only |
-| `name` | `CharField(255)` | Required | Author display name |
-| `email` | `EmailField(255)` | Required | Validated email format |
-| `created_at` | `DateTimeField` | `auto_now_add=True` | Set on creation |
-| `user` | `ForeignKey(User)` | `CASCADE` | Auto-assigned on create |
-
-### BlogPostModel
-
-| Field | Type | Constraints | Notes |
-|-------|------|-------------|-------|
-| `id` | `AutoField` | Primary Key | Auto-generated |
-| `title` | `CharField(255)` | Required | Post headline |
-| `content` | `TextField(255)` | Required | Post body content |
-| `author` | `ForeignKey(AuthorModel)` | `CASCADE`, Required | Linked author profile |
-| `image` | `ImageField` | Optional, `null=True` | Stored at `media/posts/` |
-| `created_at` | `DateTimeField` | `auto_now_add=True` | Set on creation |
-| `updated_at` | `DateTimeField` | `auto_now=True` | Updated on every save |
-| `user` | `ForeignKey(User)` | `CASCADE`, `related_name="posts"` | Auto-assigned |
-
----
-
-## API Endpoints
-
-**Base URL:** `http://localhost:8000`
-**Swagger UI:** `http://localhost:8000/api/docs/`
-
-### Authentication
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| `POST` | `/api/token/` | Obtain JWT access + refresh tokens |
-| `POST` | `/api/token/refresh/` | Refresh an expired access token |
-
-### Authors
-
-| Method | Endpoint | Description | Auth |
-|--------|----------|-------------|:----:|
-| `GET` | `/api/author/` | List your author profiles | JWT |
-| `POST` | `/api/author/` | Create an author profile | JWT |
-| `GET` | `/api/author/{id}/` | Retrieve an author | JWT |
-| `PUT` | `/api/author/{id}/` | Full update | JWT |
-| `PATCH` | `/api/author/{id}/` | Partial update | JWT |
-| `DELETE` | `/api/author/{id}/` | Delete an author | JWT |
-
-### Blog Posts
-
-| Method | Endpoint | Description | Auth |
-|--------|----------|-------------|:----:|
-| `GET` | `/api/posts/` | List your blog posts | JWT |
-| `POST` | `/api/posts/` | Create a blog post | JWT |
-| `GET` | `/api/posts/{id}/` | Retrieve a post | JWT |
-| `PUT` | `/api/posts/{id}/` | Full update | JWT |
-| `PATCH` | `/api/posts/{id}/` | Partial update | JWT |
-| `DELETE` | `/api/posts/{id}/` | Delete a post | JWT |
-| `POST` | `/api/posts/{id}/upload-image/` | Upload a cover image | JWT |
-
-### Documentation
-
-| Endpoint | Description |
-|----------|-------------|
-| `GET /api/docs/` | Interactive Swagger UI |
-| `GET /api/schema/` | Raw OpenAPI 3.0 schema |
-
----
-
-## Authentication
-
-JWT authentication via `djangorestframework-simplejwt`.
-
-| Token Type | Lifetime |
-|-----------|---------|
-| Access Token | Configurable (default: short-lived) |
-| Refresh Token | Configurable (default: 7 days) |
-
-**Step 1: Obtain tokens**
+## Testing
 
 ```bash
-curl -X POST http://localhost:8000/api/token/ \
-  -H "Content-Type: application/json" \
-  -d '{"username": "admin", "password": "yourpassword"}'
+# Run full test suite with coverage (inside Docker)
+docker compose run --rm web pytest -q
+
+# Run in parallel (faster)
+docker compose run --rm web pytest -n auto -q
+
+# Run a specific test file
+docker compose run --rm web pytest author/tests/test_data_export.py -v
+
+# Coverage report only
+docker compose run --rm web pytest --cov=author --cov-report=html
 ```
 
-**Step 2: Authenticate requests**
-
-```
-Authorization: Bearer <access-token>
-```
-
-**Step 3: Refresh when expired**
-
-```bash
-curl -X POST http://localhost:8000/api/token/refresh/ \
-  -H "Content-Type: application/json" \
-  -d '{"refresh": "<refresh-token>"}'
-```
-
----
-
-## Image Upload
-
-Blog posts support an optional cover image uploaded via a dedicated action endpoint.
-
-### Endpoint
-
-```
-POST /api/posts/{id}/upload-image/
-Content-Type: multipart/form-data
-Authorization: Bearer <access-token>
-```
-
-### How It Works
-
-The `upload_image` method is a custom `@action` on `BlogPostViews`:
-
-1. Uses `MultiPartParser` and `FormParser` to handle file data
-2. `get_serializer_class()` returns `PostImageSerializer` when the action is `upload_image`
-3. `PostImageSerializer` only exposes `id` and `image` fields
-4. Uploaded files are stored at `media/posts/<filename>`
-5. Nginx serves uploaded images from the `/media/` URL path
-
-### Example
-
-```bash
-curl -X POST http://localhost:8000/api/posts/1/upload-image/ \
-  -H "Authorization: Bearer <access-token>" \
-  -F "image=@/path/to/cover.jpg"
-```
-
-**Response:**
-```json
-{
-  "id": 1,
-  "image": "/media/posts/cover.jpg"
-}
-```
-
----
-
-## Permissions
-
-### `IsAuthenticated` (Global)
-
-All endpoints require a valid JWT token. Unauthenticated requests receive `401 Unauthorized`.
-
-### `IsOwner` (Object-Level)
-
-A custom permission class that checks whether the requesting user owns the object:
-
-```python
-class IsOwner(BasePermission):
-    def has_object_permission(self, request, view, obj):
-        return obj.user == request.user
-```
-
-This prevents users from reading, updating, or deleting resources that belong to other users. Unauthorized attempts receive `403 Forbidden`.
-
-### Per-User Query Scoping
-
-Both `AuthorViews` and `BlogPostViews` override `get_queryset()`:
-
-```python
-def get_queryset(self):
-    return BlogPostModel.objects.filter(user=self.request.user)
-```
-
-This ensures users never even see data that doesn't belong to them at the list level.
-
----
-
-## Docker Setup
-
-### Prerequisites
-
-- Docker 20.10+
-- Docker Compose 2.0+
-
-### Configuration
-
-The project uses a `.env` file. The default values are already set but **update them before a real deployment**:
-
-```bash
-cat .env
-```
-
-```env
-DEBUG=0
-SECRET_KEY=superkey
-
-POSTGRES_DB=blog_db
-POSTGRES_USER=blog_user
-POSTGRES_PASSWORD=blog_password
-
-DB_HOST=db
-DB_PORT=5432
-```
-
-### Start the Stack
-
-```bash
-cd "3. blog_app_api"
-
-# Build and start (foreground)
-docker-compose up --build
-
-# Build and start (background)
-docker-compose up --build -d
-```
-
-On first start, the `web` container automatically runs:
-1. `python manage.py migrate`
-2. `python manage.py collectstatic --noinput`
-3. Starts `gunicorn`
-
-### Create a Superuser
-
-```bash
-docker-compose exec web python manage.py createsuperuser
-```
-
-### Useful Commands
-
-```bash
-# View all running services
-docker-compose ps
-
-# Follow Django logs
-docker-compose logs -f web
-
-# Follow all service logs
-docker-compose logs -f
-
-# Open a Django shell
-docker-compose exec web python manage.py shell
-
-# Stop services
-docker-compose down
-
-# Full reset (removes volumes and database data)
-docker-compose down -v
-```
-
-### Service Overview
-
-| Service | Image | Port | Role |
-|---------|-------|------|------|
-| `db` | `postgres:16` | `5432` (internal) | PostgreSQL database with health check |
-| `web` | `python:3.12-slim` (custom) | `8000` (internal) | Django + Gunicorn application |
-| `nginx` | `nginx:alpine` | `8000 → 80` | Reverse proxy, static & media serving |
-
----
-
-## Local Development
-
-For local development without Docker, you need a local PostgreSQL instance.
-
-```bash
-# 1. Navigate to the app directory
-cd "3. blog_app_api/app"
-
-# 2. Create and activate virtual environment
-python -m venv venv
-source venv/bin/activate    # Windows: venv\Scripts\activate
-
-# 3. Install all dependencies
-pip install -r requirements.txt
-
-# 4. Configure local .env
-# Edit "3. blog_app_api/.env" — change DB_HOST from "db" to "localhost"
-
-# 5. Apply migrations
-python manage.py migrate
-
-# 6. Create superuser
-python manage.py createsuperuser
-
-# 7. Start dev server
-python manage.py runserver
-```
-
----
-
-## Example Requests
-
-### Obtain JWT Tokens
-
-```bash
-curl -X POST http://localhost:8000/api/token/ \
-  -H "Content-Type: application/json" \
-  -d '{"username": "admin", "password": "adminpassword"}'
-```
-
-### Create an Author Profile
-
-```bash
-curl -X POST http://localhost:8000/api/author/ \
-  -H "Authorization: Bearer <access-token>" \
-  -H "Content-Type: application/json" \
-  -d '{"name": "Jane Doe", "email": "jane@example.com"}'
-```
-
-### Create a Blog Post
-
-```bash
-curl -X POST http://localhost:8000/api/posts/ \
-  -H "Authorization: Bearer <access-token>" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "title": "Getting Started with Django REST Framework",
-    "content": "DRF is a powerful toolkit for building Web APIs...",
-    "author": 1
-  }'
-```
-
-### Upload a Cover Image
-
-```bash
-curl -X POST http://localhost:8000/api/posts/1/upload-image/ \
-  -H "Authorization: Bearer <access-token>" \
-  -F "image=@/path/to/cover.jpg"
-```
-
-### List Blog Posts
-
-```bash
-curl http://localhost:8000/api/posts/ \
-  -H "Authorization: Bearer <access-token>"
-```
-
-### Update a Post (Partial)
-
-```bash
-curl -X PATCH http://localhost:8000/api/posts/1/ \
-  -H "Authorization: Bearer <access-token>" \
-  -H "Content-Type: application/json" \
-  -d '{"title": "Updated: Getting Started with DRF"}'
-```
-
-### Delete a Post
-
-```bash
-curl -X DELETE http://localhost:8000/api/posts/1/ \
-  -H "Authorization: Bearer <access-token>"
-```
-
----
-
-## Example Responses
-
-### `POST /api/token/` — 200 OK
-
-```json
-{
-  "access": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNjk5MDAwMDAwLCJ1c2VyX2lkIjoxfQ.abc",
-  "refresh": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoicmVmcmVzaCIsImV4cCI6MTY5OTYwMDAwMCwidXNlcl9pZCI6MX0.xyz"
-}
-```
-
-### `POST /api/author/` — 201 Created
-
-```json
-{
-  "id": 1,
-  "name": "Jane Doe",
-  "email": "jane@example.com",
-  "created_at": "2024-01-15T09:00:00.000000Z",
-  "user": 1,
-  "user_name": "admin"
-}
-```
-
-### `POST /api/posts/` — 201 Created
-
-```json
-{
-  "id": 1,
-  "title": "Getting Started with Django REST Framework",
-  "content": "DRF is a powerful toolkit for building Web APIs...",
-  "author": 1,
-  "author_name": "Jane Doe",
-  "image": null,
-  "created_at": "2024-01-15T10:00:00.000000Z",
-  "updated_at": "2024-01-15T10:00:00.000000Z",
-  "user": 1
-}
-```
-
-### `GET /api/posts/` — 200 OK
-
-```json
-[
-  {
-    "id": 1,
-    "title": "Getting Started with Django REST Framework",
-    "content": "DRF is a powerful toolkit for building Web APIs...",
-    "author": 1,
-    "author_name": "Jane Doe",
-    "image": "/media/posts/cover_abc123.jpg",
-    "created_at": "2024-01-15T10:00:00.000000Z",
-    "updated_at": "2024-01-16T08:30:00.000000Z",
-    "user": 1
-  }
-]
-```
-
-### `POST /api/posts/1/upload-image/` — 200 OK
-
-```json
-{
-  "id": 1,
-  "image": "/media/posts/cover_abc123.jpg"
-}
-```
-
-### `GET /api/posts/2/` — 403 Forbidden (not the owner)
-
-```json
-{
-  "detail": "You do not have permission to perform this action."
-}
-```
-
-### `POST /api/posts/` — 401 Unauthorized (no token)
-
-```json
-{
-  "detail": "Authentication credentials were not provided."
-}
-```
+### Test Infrastructure
+
+| Tool | Purpose |
+|---|---|
+| `pytest` + `pytest-django` | Test runner — cleaner fixtures, no `TestCase` boilerplate |
+| `factory_boy` | Declarative test data factories (User, Post, Comment, Tag, …) |
+| `pytest-cov` | Coverage measurement with XML output for CI upload |
+| `pytest-xdist` | Parallel test execution (`-n auto`) |
+| `conftest.py` | Shared fixtures: `auth_client`, `user`, `published_post`, etc. |
+
+### Coverage
+
+Minimum enforced: **75%** (`fail_under` in `.coveragerc`). The CI pipeline blocks merges below this threshold.
 
 ---
 
 ## Environment Variables
 
-Stored in `3. blog_app_api/.env`:
+Copy `.env.example` → `.env` and fill in your values:
 
-```env
-DEBUG=0
-SECRET_KEY=your-very-long-and-random-secret-key-here
-
-POSTGRES_DB=blog_db
-POSTGRES_USER=blog_user
-POSTGRES_PASSWORD=a-strong-password-here
-
-DB_HOST=db
-DB_PORT=5432
+```bash
+cp .env.example .env
 ```
 
-| Variable | Description | Production Value |
-|----------|-------------|-----------------|
-| `DEBUG` | Enable/disable debug mode. `0` = production | `0` |
-| `SECRET_KEY` | Django cryptographic secret. Must be long and random | 50+ random chars |
-| `POSTGRES_DB` | Database name | `blog_db` |
-| `POSTGRES_USER` | Database username | Custom |
-| `POSTGRES_PASSWORD` | Database password | Strong password |
-| `DB_HOST` | Database host. Docker service name or IP | `db` |
-| `DB_PORT` | PostgreSQL port | `5432` |
-
-> **Important:** Never commit `.env` files with real credentials. The `.gitignore` excludes `.env` from version control.
+| Variable | Required | Description |
+|---|---|---|
+| `SECRET_KEY` | **Yes** | Django secret key (50+ random chars) |
+| `DEBUG` | No | `1` = dev mode, `0` = production (default) |
+| `ALLOWED_HOSTS` | No | Comma-separated hostnames (default: `localhost,127.0.0.1`) |
+| `POSTGRES_DB` | **Yes** | Database name |
+| `POSTGRES_USER` | **Yes** | Database user |
+| `POSTGRES_PASSWORD` | **Yes** | Database password |
+| `DB_HOST` | No | DB hostname (default: `db`) |
+| `REDIS_URL` | No | Redis connection URL (default: `redis://redis:6379/0`) |
+| `CORS_ALLOWED_ORIGINS` | No | Comma-separated frontend origins |
+| `SENTRY_DSN` | No | Sentry project DSN (blank = disabled) |
+| `ENVIRONMENT` | No | `production` / `staging` / `development` |
 
 ---
 
-## Future Improvements
+## Docker Services
 
-- [ ] Add user registration endpoint (`/api/register/`)
-- [ ] Implement JWT token blacklisting on logout
-- [ ] Add search and filtering for blog posts (by title, author, date range)
-- [ ] Add pagination to the posts list endpoint
-- [ ] Write 10+ integration tests using DRF's `APITestCase`
-- [ ] Add GitHub Actions CI/CD pipeline to run tests and lint on every PR
-- [ ] Add post categories or tags (similar to Notes app)
-- [ ] Add comment support (`CommentModel` linked to `BlogPostModel`)
-- [ ] Add a public/draft status field to posts
-- [ ] Implement rate limiting on authentication endpoints
-- [ ] Deploy to a cloud provider (Railway / Render / AWS ECS)
-- [ ] Add HTTPS via Let's Encrypt + Certbot in Nginx
+```bash
+docker compose up --build        # Start everything
+docker compose up web redis      # Start only web + Redis (skip Celery)
+docker compose logs -f web       # Tail Django logs
+docker compose exec web python manage.py shell
+docker compose exec web python manage.py createsuperuser
+docker compose down -v           # Stop + delete all volumes
+```
+
+| Service | Image | Role |
+|---|---|---|
+| `db` | `postgres:16` | Primary database with health check |
+| `redis` | `redis:7-alpine` | Cache + Celery broker |
+| `web` | Custom (python:3.12-slim) | Django + Gunicorn (4 workers) |
+| `celery-worker` | Same as web | Async task consumer |
+| `celery-beat` | Same as web | Periodic task scheduler |
+| `nginx` | `nginx:alpine` | Reverse proxy + static/media serving |
+
+---
+
+## CI/CD Pipeline
+
+Four jobs run on every push and pull request:
+
+```
+push/PR ──► lint ──► security ──► test ──► (parallel) docker-build
+              │           │           │
+           flake8      bandit      pytest
+           black       safety      coverage
+                                  codecov
+```
+
+| Job | What it checks |
+|---|---|
+| **lint** | `flake8` style + `black` formatting |
+| **security** | `bandit` static analysis + `safety` CVE scan |
+| **test** | Full pytest suite against a real DB + Redis; uploads to Codecov |
+| **docker-build** | Verifies the production Docker image builds and passes `manage.py check --deploy` |
+
+---
+
+## Project Structure
+
+```
+blog-app-api/
+├── app/
+│   ├── core/
+│   │   ├── celery.py           # Celery app + autodiscover
+│   │   ├── settings.py         # All settings — env-driven, security hardened
+│   │   ├── urls.py             # Root URL config
+│   │   └── urls_v1.py          # /api/v1/ versioned routes
+│   ├── author/
+│   │   ├── models.py           # 17+ models (Post, Comment, Citation, Notification, …)
+│   │   ├── serializers.py      # 15+ serializers with computed fields
+│   │   ├── views.py            # 35+ class-based views
+│   │   ├── tasks.py            # Celery tasks (link health, publish, email)
+│   │   ├── middleware.py       # RequestIDMiddleware + timing
+│   │   ├── throttles.py        # Per-endpoint rate limits
+│   │   ├── feeds.py            # RSS / Atom feeds
+│   │   ├── sitemaps.py         # XML sitemap
+│   │   ├── management/
+│   │   │   └── commands/       # check_link_health, publish_scheduled
+│   │   └── tests/
+│   │       ├── conftest.py     # pytest fixtures
+│   │       ├── factories.py    # factory_boy factories
+│   │       └── test_*.py       # 50+ test modules
+│   ├── accounts/
+│   │   └── models.py           # Custom User with unique handle
+│   ├── pytest.ini              # pytest + coverage config
+│   └── requirements.txt
+├── docker/
+│   └── nginx/default.conf      # Reverse proxy + security headers
+├── .github/
+│   └── workflows/ci.yml        # 4-job CI pipeline
+├── .env.example                # Environment variable template
+├── docker-compose.yml          # Full 6-service stack
+└── Dockerfile                  # python:3.12-slim, non-root user
+```
+
+---
+
+## Key Design Decisions
+
+**Why PostgreSQL full-text search instead of Elasticsearch?**
+Eliminates a separate service. PostgreSQL `SearchVector` + `SearchRank` handles the scale of a blog platform; Elasticsearch would be premature optimization.
+
+**Why Celery Beat via `DatabaseScheduler` instead of cron?**
+Periodic tasks are editable at runtime via Django admin without redeployment. Also survives container restarts without losing schedule state.
+
+**Why `CONN_MAX_AGE=60`?**
+Persistent database connections eliminate TCP handshake overhead on every request. Safe with Gunicorn since each worker maintains its own connection pool.
+
+**Why `X-Request-ID` middleware?**
+Enables end-to-end request tracing across Nginx logs, Django logs, Celery task logs, and Sentry — essential for debugging distributed systems.
 
 ---
 
 <div align="center">
 
-Part of the **[Django Advanced REST API Course](../README.md)** repository
+Built with Django 5.2 · PostgreSQL 16 · Redis 7 · Celery 5.4
 
 </div>

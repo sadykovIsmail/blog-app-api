@@ -1,5 +1,5 @@
 from django.contrib.auth import get_user_model
-from .models import AuthorModel, BlogPostModel, Comment, Reaction, Notification, Citation, PostVersion, PostReview
+from .models import AuthorModel, BlogPostModel, Comment, Reaction, Notification, Citation, PostVersion, PostReview, Tag, Bookmark, Series
 from rest_framework import serializers
 
 User = get_user_model()
@@ -53,16 +53,42 @@ class UserPublicProfileSerializer(serializers.ModelSerializer):
         return obj.following.count()
 
 
+class TagSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Tag
+        fields = ['id', 'name', 'slug']
+        read_only_fields = ['id', 'slug']
+
+    def validate_name(self, value):
+        if Tag.objects.filter(name__iexact=value).exists():
+            raise serializers.ValidationError("A tag with this name already exists.")
+        return value
+
+
 class PublicPostSerializer(serializers.ModelSerializer):
     author_handle = serializers.CharField(source='user.handle', read_only=True)
     reaction_count = serializers.IntegerField(source='reactions.count', read_only=True)
+    tags = TagSerializer(many=True, read_only=True)
+    reading_time_minutes = serializers.SerializerMethodField()
+    view_count = serializers.SerializerMethodField()
+    co_author_handles = serializers.SerializerMethodField()
 
     class Meta:
         model = BlogPostModel
         fields = [
             'id', 'title', 'slug', 'content', 'author_handle',
-            'status', 'visibility', 'published_at', 'created_at', 'reaction_count',
+            'status', 'visibility', 'published_at', 'created_at', 'reaction_count', 'tags',
+            'reading_time_minutes', 'pinned', 'view_count', 'co_author_handles',
         ]
+
+    def get_reading_time_minutes(self, obj):
+        return max(1, len(obj.content.split()) // 200)
+
+    def get_view_count(self, obj):
+        return obj.post_views.count()
+
+    def get_co_author_handles(self, obj):
+        return list(obj.co_authors.select_related('user').values_list('user__handle', flat=True))
 
 
 class AuthorSerializer(serializers.ModelSerializer):
@@ -81,6 +107,7 @@ class AuthorSerializer(serializers.ModelSerializer):
 class BlogPostSerializer(serializers.ModelSerializer):
     author_name = serializers.CharField(source='author.name', read_only=True)
     reason_for_change = serializers.CharField(write_only=True, required=False, allow_blank=True)
+    reading_time_minutes = serializers.SerializerMethodField()
 
     class Meta:
         model = BlogPostModel
@@ -89,9 +116,12 @@ class BlogPostSerializer(serializers.ModelSerializer):
             'status', 'visibility', 'slug',
             'published_at', 'scheduled_for',
             'created_at', 'updated_at', 'image', 'user',
-            'reason_for_change',
+            'reason_for_change', 'reading_time_minutes',
         ]
         read_only_fields = ['id', 'slug', 'published_at', 'created_at', 'updated_at', 'user']
+
+    def get_reading_time_minutes(self, obj):
+        return max(1, len(obj.content.split()) // 200)
 
     def validate(self, data):
         import re
@@ -162,8 +192,26 @@ class NotificationSerializer(serializers.ModelSerializer):
         read_only_fields = fields
 
 
+class BookmarkSerializer(serializers.ModelSerializer):
+    title = serializers.CharField(source='post.title', read_only=True)
+    slug = serializers.CharField(source='post.slug', read_only=True)
+    post_id = serializers.IntegerField(source='post.id', read_only=True)
+
+    class Meta:
+        model = Bookmark
+        fields = ['id', 'post_id', 'title', 'slug', 'created_at']
+        read_only_fields = fields
+
+
 class PostImageSerializer(serializers.ModelSerializer):
     class Meta:
         model = BlogPostModel
         fields = ['id', "image"]
         read_only_fields = ["id"]
+
+
+class SeriesSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Series
+        fields = ['id', 'title', 'slug', 'description', 'created_at']
+        read_only_fields = ['id', 'slug', 'created_at']
