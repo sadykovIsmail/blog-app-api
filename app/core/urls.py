@@ -34,7 +34,7 @@ from author.views import (
     ReportPostView, ReportCommentView, HideCommentView,
     SeriesListCreateView, SeriesDetailView, SeriesPostView,
     BlockView, PostPinView, TrendingPostsView,
-    PostViewCountView,
+    PostViewCountView, CoAuthorView,
 )
 from author.feeds import LatestPostsFeed, AuthorPostsFeed
 from django.contrib.sitemaps.views import sitemap
@@ -81,6 +81,7 @@ urlpatterns = [
     path('api/users/<int:pk>/block/', BlockView.as_view(), name='block'),
     path('api/posts/<int:pk>/pin/', PostPinView.as_view(), name='post-pin'),
     path('api/posts/<int:pk>/view/', PostViewCountView.as_view(), name='post-view'),
+    path('api/posts/<int:pk>/co-authors/', CoAuthorView.as_view(), name='co-authors'),
     path('feed/', LatestPostsFeed(), name='rss-feed'),
     path('feed/<str:handle>/', AuthorPostsFeed(), name='author-rss-feed'),
     path('sitemap.xml', sitemap, {'sitemaps': sitemaps}, name='django.contrib.sitemaps.views.sitemap'),

@@ -71,13 +71,14 @@ class PublicPostSerializer(serializers.ModelSerializer):
     tags = TagSerializer(many=True, read_only=True)
     reading_time_minutes = serializers.SerializerMethodField()
     view_count = serializers.SerializerMethodField()
+    co_author_handles = serializers.SerializerMethodField()
 
     class Meta:
         model = BlogPostModel
         fields = [
             'id', 'title', 'slug', 'content', 'author_handle',
             'status', 'visibility', 'published_at', 'created_at', 'reaction_count', 'tags',
-            'reading_time_minutes', 'pinned', 'view_count',
+            'reading_time_minutes', 'pinned', 'view_count', 'co_author_handles',
         ]
 
     def get_reading_time_minutes(self, obj):
@@ -85,6 +86,9 @@ class PublicPostSerializer(serializers.ModelSerializer):
 
     def get_view_count(self, obj):
         return obj.post_views.count()
+
+    def get_co_author_handles(self, obj):
+        return list(obj.co_authors.select_related('user').values_list('user__handle', flat=True))
 
 
 class AuthorSerializer(serializers.ModelSerializer):

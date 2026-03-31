@@ -291,6 +291,18 @@ class BlogPostModel(models.Model):
         return self.title
 
 
+class CoAuthor(models.Model):
+    post = models.ForeignKey('BlogPostModel', on_delete=models.CASCADE, related_name='co_authors')
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='co_authored_posts')
+    added_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('post', 'user')
+
+    def __str__(self):
+        return f"{self.user} co-author of {self.post}"
+
+
 class PostView(models.Model):
     post = models.ForeignKey('BlogPostModel', on_delete=models.CASCADE, related_name='post_views')
     ip_hash = models.CharField(max_length=64)

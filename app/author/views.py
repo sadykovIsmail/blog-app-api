@@ -4,7 +4,7 @@ from rest_framework.views import APIView
 from .models import (
     AuthorModel, BlogPostModel, Follow, Comment,
     Reaction, Notification, Citation, PostVersion, PostReview,
-    Report, ModerationAuditLog, Tag, Bookmark, Series, SeriesPost, Block, PostView,
+    Report, ModerationAuditLog, Tag, Bookmark, Series, SeriesPost, Block, PostView, CoAuthor,
 )
 from .serializers import (
     AuthorSerializer, BlogPostSerializer, PublicPostSerializer,
@@ -616,3 +616,26 @@ class PostViewCountView(APIView):
         ip_hash = hashlib.sha256(ip.encode()).hexdigest()
         PostView.objects.get_or_create(post=post, ip_hash=ip_hash)
         return Response({'view_count': post.view_count})
+
+
+class CoAuthorView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, pk):
+        from django.shortcuts import get_object_or_404
+        from django.contrib.auth import get_user_model
+        User = get_user_model()
+        post = get_object_or_404(BlogPostModel, pk=pk, user=request.user)
+        user_id = request.data.get('user_id')
+        target = get_object_or_404(User, pk=user_id)
+        if target == request.user:
+            return Response({'detail': 'Cannot add yourself as co-author.'}, status=status.HTTP_400_BAD_REQUEST)
+        CoAuthor.objects.get_or_create(post=post, user=target)
+        return Response({'post_id': post.id, 'co_author': target.handle}, status=status.HTTP_201_CREATED)
+
+    def delete(self, request, pk):
+        from django.shortcuts import get_object_or_404
+        post = get_object_or_404(BlogPostModel, pk=pk, user=request.user)
+        user_id = request.data.get('user_id')
+        CoAuthor.objects.filter(post=post, user_id=user_id).delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
