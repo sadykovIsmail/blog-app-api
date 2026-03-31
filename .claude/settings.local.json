@@ -11,7 +11,12 @@
       "Bash(GIT_AUTHOR_DATE=\"$D2\" GIT_COMMITTER_DATE=\"$D2\" git commit -m \"test: add failing TDD tests for OpenGraph metadata\")",
       "Bash(\"c:/Users/ismai/OneDrive/Desktop/blog-app-api/app/author/views.py\":*)",
       "Bash(D2=\"2026-03-31T10:30:00\")",
-      "Bash(GIT_AUTHOR_DATE=\"$D2\" GIT_COMMITTER_DATE=\"$D2\" git commit -m \"feat: add OpenGraph metadata endpoint — Closes #70\")"
+      "Bash(GIT_AUTHOR_DATE=\"$D2\" GIT_COMMITTER_DATE=\"$D2\" git commit -m \"feat: add OpenGraph metadata endpoint — Closes #70\")",
+      "Bash(D2=\"2026-03-31T11:00:00\")",
+      "Bash(GIT_AUTHOR_DATE=\"$D2\" GIT_COMMITTER_DATE=\"$D2\" git add app/author/tests/test_user_stats.py)",
+      "Bash(GIT_AUTHOR_DATE=\"$D2\" GIT_COMMITTER_DATE=\"$D2\" git commit -m \"test: add failing TDD tests for user statistics\")",
+      "Bash(D2=\"2026-03-31T11:30:00\")",
+      "Bash(GIT_AUTHOR_DATE=\"$D2\" GIT_COMMITTER_DATE=\"$D2\" git commit -m \"feat: add user statistics endpoint — Closes #71\")"
     ]
   }
 }

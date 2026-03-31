@@ -662,3 +662,28 @@ class OpenGraphView(APIView):
             'og_type': 'article',
             'og_published_time': post.published_at,
         })
+
+
+class UserStatsView(APIView):
+    permission_classes = [AllowAny]
+
+    def get(self, request, pk):
+        from django.shortcuts import get_object_or_404
+        from django.contrib.auth import get_user_model
+        from django.db.models import Count
+        User = get_user_model()
+        user = get_object_or_404(User, pk=pk)
+        total_posts = BlogPostModel.objects.filter(user=user, status=BlogPostModel.Status.PUBLISHED).count()
+        total_reactions = Reaction.objects.filter(post__user=user).count()
+        total_comments = Comment.objects.filter(post__user=user).count()
+        follower_count = Follow.objects.filter(following=user).count()
+        following_count = Follow.objects.filter(follower=user).count()
+        return Response({
+            'user_id': user.id,
+            'handle': user.handle,
+            'total_posts': total_posts,
+            'total_reactions': total_reactions,
+            'total_comments': total_comments,
+            'follower_count': follower_count,
+            'following_count': following_count,
+        })
