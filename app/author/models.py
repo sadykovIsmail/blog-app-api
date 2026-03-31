@@ -283,8 +283,21 @@ class BlogPostModel(models.Model):
             n += 1
         return slug
 
+    @property
+    def view_count(self):
+        return self.post_views.count()
+
     def __str__(self):
         return self.title
+
+
+class PostView(models.Model):
+    post = models.ForeignKey('BlogPostModel', on_delete=models.CASCADE, related_name='post_views')
+    ip_hash = models.CharField(max_length=64)
+    viewed_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('post', 'ip_hash')
 
 
 class Block(models.Model):

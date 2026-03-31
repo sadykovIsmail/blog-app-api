@@ -70,17 +70,21 @@ class PublicPostSerializer(serializers.ModelSerializer):
     reaction_count = serializers.IntegerField(source='reactions.count', read_only=True)
     tags = TagSerializer(many=True, read_only=True)
     reading_time_minutes = serializers.SerializerMethodField()
+    view_count = serializers.SerializerMethodField()
 
     class Meta:
         model = BlogPostModel
         fields = [
             'id', 'title', 'slug', 'content', 'author_handle',
             'status', 'visibility', 'published_at', 'created_at', 'reaction_count', 'tags',
-            'reading_time_minutes', 'pinned',
+            'reading_time_minutes', 'pinned', 'view_count',
         ]
 
     def get_reading_time_minutes(self, obj):
         return max(1, len(obj.content.split()) // 200)
+
+    def get_view_count(self, obj):
+        return obj.post_views.count()
 
 
 class AuthorSerializer(serializers.ModelSerializer):

@@ -4,7 +4,7 @@ from rest_framework.views import APIView
 from .models import (
     AuthorModel, BlogPostModel, Follow, Comment,
     Reaction, Notification, Citation, PostVersion, PostReview,
-    Report, ModerationAuditLog, Tag, Bookmark, Series, SeriesPost, Block,
+    Report, ModerationAuditLog, Tag, Bookmark, Series, SeriesPost, Block, PostView,
 )
 from .serializers import (
     AuthorSerializer, BlogPostSerializer, PublicPostSerializer,
@@ -603,3 +603,16 @@ class BlockView(APIView):
     def delete(self, request, pk):
         Block.objects.filter(blocker=request.user, blocked_id=pk).delete()
         return Response(status=204)
+
+
+class PostViewCountView(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request, pk):
+        import hashlib
+        from django.shortcuts import get_object_or_404
+        post = get_object_or_404(BlogPostModel, pk=pk, status=BlogPostModel.Status.PUBLISHED)
+        ip = request.META.get('REMOTE_ADDR', '')
+        ip_hash = hashlib.sha256(ip.encode()).hexdigest()
+        PostView.objects.get_or_create(post=post, ip_hash=ip_hash)
+        return Response({'view_count': post.view_count})
