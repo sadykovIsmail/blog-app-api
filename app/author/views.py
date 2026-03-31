@@ -639,3 +639,26 @@ class CoAuthorView(APIView):
         user_id = request.data.get('user_id')
         CoAuthor.objects.filter(post=post, user_id=user_id).delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class OpenGraphView(APIView):
+    permission_classes = [AllowAny]
+
+    def get(self, request, slug):
+        from django.shortcuts import get_object_or_404
+        post = get_object_or_404(
+            BlogPostModel,
+            slug=slug,
+            status=BlogPostModel.Status.PUBLISHED,
+            visibility=BlogPostModel.Visibility.PUBLIC,
+        )
+        description = post.content[:160].strip()
+        return Response({
+            'og_title': post.title,
+            'og_description': description,
+            'og_url': f"/posts/{post.slug}/",
+            'og_author': post.user.handle,
+            'og_image': request.build_absolute_uri(post.image.url) if post.image else None,
+            'og_type': 'article',
+            'og_published_time': post.published_at,
+        })
