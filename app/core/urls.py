@@ -36,6 +36,8 @@ from author.views import (
     BlockView, PostPinView, TrendingPostsView,
     PostViewCountView, CoAuthorView, OpenGraphView, UserStatsView,
     SubscribeView, SubscriptionListView,
+    DataExportView, HealthCheckView, AccountDeleteView,
+    MarkNotificationsReadView, MeView,
 )
 from author.feeds import LatestPostsFeed, AuthorPostsFeed
 from django.contrib.sitemaps.views import sitemap
@@ -88,6 +90,11 @@ urlpatterns = [
     path('api/users/<int:pk>/stats/', UserStatsView.as_view(), name='user-stats'),
     path('api/users/<int:pk>/subscribe/', SubscribeView.as_view(), name='subscribe'),
     path('api/subscriptions/', SubscriptionListView.as_view(), name='subscription-list'),
+    path('api/auth/export/', DataExportView.as_view(), name='data-export'),
+    path('api/auth/account/', AccountDeleteView.as_view(), name='account-delete'),
+    path('api/auth/me/', MeView.as_view(), name='me'),
+    path('api/notifications/mark-read/', MarkNotificationsReadView.as_view(), name='notifications-mark-read'),
+    path('api/health/', HealthCheckView.as_view(), name='health'),
     path('feed/', LatestPostsFeed(), name='rss-feed'),
     path('feed/<str:handle>/', AuthorPostsFeed(), name='author-rss-feed'),
     path('sitemap.xml', sitemap, {'sitemaps': sitemaps}, name='django.contrib.sitemaps.views.sitemap'),

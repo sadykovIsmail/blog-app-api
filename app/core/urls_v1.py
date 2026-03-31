@@ -16,6 +16,8 @@ from author.views import (
     SeriesListCreateView, SeriesDetailView, SeriesPostView,
     BlockView, PostPinView, TrendingPostsView, PostViewCountView,
     CoAuthorView, OpenGraphView, UserStatsView, SubscribeView, SubscriptionListView,
+    DataExportView, HealthCheckView, AccountDeleteView,
+    MarkNotificationsReadView, MeView,
 )
 
 urlpatterns = [
@@ -60,5 +62,10 @@ urlpatterns = [
     path('posts/<int:pk>/pin/', PostPinView.as_view(), name='v1-post-pin'),
     path('posts/<int:pk>/view/', PostViewCountView.as_view(), name='v1-post-view'),
     path('posts/<int:pk>/co-authors/', CoAuthorView.as_view(), name='v1-co-authors'),
+    path('auth/export/', DataExportView.as_view(), name='v1-data-export'),
+    path('auth/account/', AccountDeleteView.as_view(), name='v1-account-delete'),
+    path('auth/me/', MeView.as_view(), name='v1-me'),
+    path('notifications/mark-read/', MarkNotificationsReadView.as_view(), name='v1-notifications-mark-read'),
+    path('health/', HealthCheckView.as_view(), name='v1-health'),
     path('', include('author.urls')),
 ]

@@ -743,3 +743,128 @@ class SubscriptionListView(generics.ListAPIView):
         if page is not None:
             return self.get_paginated_response(data)
         return Response(data)
+
+
+class DataExportView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        user = request.user
+        posts = list(BlogPostModel.objects.filter(user=user).values(
+            'id', 'title', 'slug', 'status', 'visibility', 'created_at', 'published_at'
+        ))
+        comments = list(Comment.objects.filter(user=user).values(
+            'id', 'post_id', 'body', 'created_at'
+        ))
+        bookmarks = list(Bookmark.objects.filter(user=user).select_related('post').values(
+            'id', 'post__title', 'post__slug', 'created_at'
+        ))
+        follows = list(Follow.objects.filter(follower=user).select_related('following').values_list(
+            'following__handle', flat=True
+        ))
+        return Response({
+            'username': user.username,
+            'handle': user.handle,
+            'email': user.email,
+            'posts': posts,
+            'comments': comments,
+            'bookmarks': bookmarks,
+            'follows': list(follows),
+        })
+
+
+# ---------------------------------------------------------------------------
+# Health check — used by load balancers, uptime monitors, and CI smoke tests
+# ---------------------------------------------------------------------------
+class HealthCheckView(APIView):
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+        from django.db import connection
+        from django.core.cache import cache
+
+        checks = {}
+        overall = "ok"
+
+        # Database
+        try:
+            connection.ensure_connection()
+            checks['db'] = 'ok'
+        except Exception:
+            checks['db'] = 'error'
+            overall = 'degraded'
+
+        # Cache (Redis)
+        try:
+            cache.set('_health', 1, timeout=5)
+            assert cache.get('_health') == 1
+            checks['cache'] = 'ok'
+        except Exception:
+            checks['cache'] = 'error'
+            overall = 'degraded'
+
+        http_status = status.HTTP_200_OK if overall == 'ok' else status.HTTP_503_SERVICE_UNAVAILABLE
+        return Response(
+            {'status': overall, 'version': '1.0.0', **checks},
+            status=http_status,
+        )
+
+
+# ---------------------------------------------------------------------------
+# GDPR — Right to erasure (account deletion)
+# ---------------------------------------------------------------------------
+class AccountDeleteView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def delete(self, request):
+        user = request.user
+        user.delete()
+        return Response(
+            {'detail': 'Account and all associated data have been permanently deleted.'},
+            status=status.HTTP_204_NO_CONTENT,
+        )
+
+
+# ---------------------------------------------------------------------------
+# Notifications — mark all as read
+# ---------------------------------------------------------------------------
+class MarkNotificationsReadView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def patch(self, request):
+        count = Notification.objects.filter(
+            recipient=request.user, is_read=False
+        ).update(is_read=True)
+        return Response({'marked_read': count})
+
+
+# ---------------------------------------------------------------------------
+# Me — full authenticated user profile + stats in a single request
+# ---------------------------------------------------------------------------
+class MeView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        from django.db.models import Count
+        user = request.user
+        total_posts = BlogPostModel.objects.filter(user=user, status=BlogPostModel.Status.PUBLISHED).count()
+        total_reactions = Reaction.objects.filter(post__user=user).count()
+        total_comments = Comment.objects.filter(post__user=user).count()
+        follower_count = Follow.objects.filter(following=user).count()
+        following_count = Follow.objects.filter(follower=user).count()
+        unread_notifications = Notification.objects.filter(recipient=user, is_read=False).count()
+        return Response({
+            'id': user.id,
+            'username': user.username,
+            'handle': user.handle,
+            'email': user.email,
+            'date_joined': user.date_joined,
+            'stats': {
+                'total_posts': total_posts,
+                'total_reactions': total_reactions,
+                'total_comments': total_comments,
+                'follower_count': follower_count,
+                'following_count': following_count,
+                'unread_notifications': unread_notifications,
+            },
+        })

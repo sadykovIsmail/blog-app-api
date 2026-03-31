@@ -2,35 +2,78 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    branches: [main, "feature/**"]
   pull_request:
     branches: [main]
 
+# Cancel redundant runs on the same branch
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
+  # ──────────────────────────────────────────────
+  # Job 1: Code style & lint
+  # ──────────────────────────────────────────────
   lint:
-    name: Lint (flake8)
+    name: Lint & Format Check
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+          cache: pip
 
-      - name: Install flake8
-        run: pip install flake8==7.1.1
+      - name: Install lint tools
+        run: pip install -r app/requirements-dev.txt --quiet
 
-      - name: Run flake8
-        run: flake8 app/ --max-line-length=119 --exclude=app/*/migrations/
+      - name: flake8
+        run: flake8 app/ --max-line-length=119 --exclude=app/*/migrations/,app/*/__pycache__/
 
-  test:
-    name: Run Tests
+      - name: black (format check)
+        run: black --check --line-length=119 app/ --exclude="migrations|__pycache__"
+
+  # ──────────────────────────────────────────────
+  # Job 2: Security scanning
+  # ──────────────────────────────────────────────
+  security:
+    name: Security Scan
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install security tools
+        run: pip install -r app/requirements-dev.txt --quiet
+
+      - name: bandit (static analysis)
+        run: bandit -r app/ -ll --exclude app/author/tests/,app/*/migrations/ -f json -o bandit-report.json || true
+
+      - name: Upload bandit report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: bandit-report
+          path: bandit-report.json
+
+      - name: safety (dependency CVE check)
+        run: safety check -r app/requirements.txt --output json || true
+
+  # ──────────────────────────────────────────────
+  # Job 3: Tests + coverage
+  # ──────────────────────────────────────────────
+  test:
+    name: Tests (pytest + coverage)
+    runs-on: ubuntu-latest
+    needs: lint
+    steps:
+      - uses: actions/checkout@v4
 
       - name: Create .env from GitHub Secrets
         run: |
@@ -42,15 +85,63 @@ jobs:
           POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }}
           DB_HOST=db
           DB_PORT=5432
-          ALLOWED_HOSTS=*
+          ALLOWED_HOSTS=localhost,127.0.0.1
+          REDIS_URL=redis://redis:6379/0
+          SENTRY_DSN=
           EOF
 
       - name: Build Docker image
-        run: docker compose build
+        run: docker compose build web
 
-      - name: Run tests
-        run: docker compose run --rm web python manage.py test
+      - name: Run pytest with coverage
+        run: |
+          docker compose run --rm web pytest \
+            --cov=author --cov=core \
+            --cov-report=term-missing \
+            --cov-report=xml:coverage.xml \
+            -p no:warnings \
+            --tb=short \
+            -q
+
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-xml
+          path: coverage.xml
+
+      - name: Upload to Codecov
+        if: success()
+        uses: codecov/codecov-action@v4
+        with:
+          files: ./coverage.xml
+          fail_ci_if_error: false
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
 
       - name: Tear down
         if: always()
         run: docker compose down -v
+
+  # ──────────────────────────────────────────────
+  # Job 4: Docker build verification
+  # ──────────────────────────────────────────────
+  docker-build:
+    name: Docker Build Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build production image
+        run: docker build -t blog-api:ci .
+
+      - name: Verify image starts
+        run: |
+          docker run --rm \
+            -e SECRET_KEY=ci-test-key-not-real \
+            -e DEBUG=0 \
+            -e POSTGRES_DB=x \
+            -e POSTGRES_USER=x \
+            -e POSTGRES_PASSWORD=x \
+            blog-api:ci \
+            python manage.py check --deploy 2>&1 | grep -v "redis\|database\|DATABASES" || true

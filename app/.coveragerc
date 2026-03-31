@@ -1,0 +1,22 @@
+[run]
+source = author, core
+omit =
+    */migrations/*
+    */tests/*
+    */test_*.py
+    manage.py
+    */wsgi.py
+    */asgi.py
+    */celery.py
+
+[report]
+show_missing = True
+fail_under = 75
+exclude_lines =
+    pragma: no cover
+    def __repr__
+    raise NotImplementedError
+    if TYPE_CHECKING:
+
+[xml]
+output = coverage.xml

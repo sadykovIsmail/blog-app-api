@@ -11,8 +11,26 @@ python-dotenv==1.2.1
 
 whitenoise==6.7.0
 Pillow==10.4.0
-python-dotenv==1.2.1
 
 requests==2.32.3
 
-flake8==7.1.1
+# CORS
+django-cors-headers==4.6.0
+
+# Redis cache
+django-redis==5.4.0
+
+# Async task queue
+celery[redis]==5.4.0
+django-celery-beat==2.9.0
+
+# Error tracking & observability
+sentry-sdk[django]==2.22.0
+
+# Testing
+pytest==8.3.5
+pytest-django==4.9.0
+pytest-cov==6.0.0
+pytest-xdist==3.6.1
+factory_boy==3.3.3
+Faker==33.3.1
