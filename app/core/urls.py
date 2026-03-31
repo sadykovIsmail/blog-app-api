@@ -36,6 +36,10 @@ from author.views import (
     BlockView, PostPinView, TrendingPostsView,
 )
 from author.feeds import LatestPostsFeed, AuthorPostsFeed
+from django.contrib.sitemaps.views import sitemap
+from author.sitemaps import PostSitemap
+
+sitemaps = {'posts': PostSitemap}
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -77,4 +81,5 @@ urlpatterns = [
     path('api/posts/<int:pk>/pin/', PostPinView.as_view(), name='post-pin'),
     path('feed/', LatestPostsFeed(), name='rss-feed'),
     path('feed/<str:handle>/', AuthorPostsFeed(), name='author-rss-feed'),
+    path('sitemap.xml', sitemap, {'sitemaps': sitemaps}, name='django.contrib.sitemaps.views.sitemap'),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
