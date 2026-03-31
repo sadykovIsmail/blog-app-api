@@ -50,6 +50,7 @@ services:
       POSTGRES_DB: blog_db
       POSTGRES_USER: blog_user
       POSTGRES_PASSWORD: blog_password
+      SECURE_SSL_REDIRECT: "False"
 
   celery-worker:
     build: .
