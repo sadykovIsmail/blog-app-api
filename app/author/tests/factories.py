@@ -47,7 +47,6 @@ class BlogPostFactory(DjangoModelFactory):
         model = "author.BlogPostModel"
 
     title = factory.Faker("sentence", nb_words=6)
-    content = factory.Faker("paragraphs", nb=3, as_sentences=False)
     content = factory.Faker("text", max_nb_chars=500)
     author = factory.SubFactory(AuthorModelFactory, user=factory.SelfAttribute("..user"))
     user = factory.SubFactory(UserFactory)
