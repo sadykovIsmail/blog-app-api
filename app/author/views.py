@@ -4,7 +4,7 @@ from rest_framework.views import APIView
 from .models import (
     AuthorModel, BlogPostModel, Follow, Comment,
     Reaction, Notification, Citation, PostVersion, PostReview,
-    Report, ModerationAuditLog, Tag, Bookmark, Series, SeriesPost, Block, PostView, CoAuthor,
+    Report, ModerationAuditLog, Tag, Bookmark, Series, SeriesPost, Block, PostView, CoAuthor, NewsletterSubscription,
 )
 from .serializers import (
     AuthorSerializer, BlogPostSerializer, PublicPostSerializer,
@@ -678,6 +678,7 @@ class UserStatsView(APIView):
         total_comments = Comment.objects.filter(post__user=user).count()
         follower_count = Follow.objects.filter(following=user).count()
         following_count = Follow.objects.filter(follower=user).count()
+        subscriber_count = NewsletterSubscription.objects.filter(author=user).count()
         return Response({
             'user_id': user.id,
             'handle': user.handle,
@@ -686,4 +687,41 @@ class UserStatsView(APIView):
             'total_comments': total_comments,
             'follower_count': follower_count,
             'following_count': following_count,
+            'subscriber_count': subscriber_count,
         })
+
+
+class SubscribeView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, pk):
+        from django.shortcuts import get_object_or_404
+        from django.contrib.auth import get_user_model
+        User = get_user_model()
+        author = get_object_or_404(User, pk=pk)
+        if author == request.user:
+            return Response({'detail': 'Cannot subscribe to yourself.'}, status=status.HTTP_400_BAD_REQUEST)
+        obj, created = NewsletterSubscription.objects.get_or_create(subscriber=request.user, author=author)
+        if created:
+            return Response({'detail': 'Subscribed.'}, status=status.HTTP_201_CREATED)
+        return Response({'detail': 'Already subscribed.'}, status=status.HTTP_200_OK)
+
+    def delete(self, request, pk):
+        NewsletterSubscription.objects.filter(subscriber=request.user, author_id=pk).delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class SubscriptionListView(generics.ListAPIView):
+    permission_classes = [IsAuthenticated]
+    pagination_class = StandardPagination
+
+    def get_queryset(self):
+        return NewsletterSubscription.objects.filter(subscriber=self.request.user).select_related('author')
+
+    def list(self, request, *args, **kwargs):
+        qs = self.get_queryset()
+        page = self.paginate_queryset(qs)
+        data = [{'id': s.id, 'author_id': s.author.id, 'handle': s.author.handle, 'created_at': s.created_at} for s in (page or qs)]
+        if page is not None:
+            return self.get_paginated_response(data)
+        return Response(data)

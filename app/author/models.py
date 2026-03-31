@@ -291,6 +291,22 @@ class BlogPostModel(models.Model):
         return self.title
 
 
+class NewsletterSubscription(models.Model):
+    subscriber = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='subscriptions',
+    )
+    author = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='subscribers',
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('subscriber', 'author')
+
+    def __str__(self):
+        return f"{self.subscriber} subscribed to {self.author}"
+
+
 class CoAuthor(models.Model):
     post = models.ForeignKey('BlogPostModel', on_delete=models.CASCADE, related_name='co_authors')
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='co_authored_posts')

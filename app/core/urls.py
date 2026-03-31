@@ -35,6 +35,7 @@ from author.views import (
     SeriesListCreateView, SeriesDetailView, SeriesPostView,
     BlockView, PostPinView, TrendingPostsView,
     PostViewCountView, CoAuthorView, OpenGraphView, UserStatsView,
+    SubscribeView, SubscriptionListView,
 )
 from author.feeds import LatestPostsFeed, AuthorPostsFeed
 from django.contrib.sitemaps.views import sitemap
@@ -84,6 +85,8 @@ urlpatterns = [
     path('api/posts/<int:pk>/co-authors/', CoAuthorView.as_view(), name='co-authors'),
     path('api/public/posts/<slug:slug>/og/', OpenGraphView.as_view(), name='post-og'),
     path('api/users/<int:pk>/stats/', UserStatsView.as_view(), name='user-stats'),
+    path('api/users/<int:pk>/subscribe/', SubscribeView.as_view(), name='subscribe'),
+    path('api/subscriptions/', SubscriptionListView.as_view(), name='subscription-list'),
     path('feed/', LatestPostsFeed(), name='rss-feed'),
     path('feed/<str:handle>/', AuthorPostsFeed(), name='author-rss-feed'),
     path('sitemap.xml', sitemap, {'sitemaps': sitemaps}, name='django.contrib.sitemaps.views.sitemap'),
