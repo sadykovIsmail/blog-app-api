@@ -35,6 +35,7 @@ from author.views import (
     SeriesListCreateView, SeriesDetailView, SeriesPostView,
     BlockView, PostPinView, TrendingPostsView,
 )
+from author.feeds import LatestPostsFeed, AuthorPostsFeed
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -74,4 +75,6 @@ urlpatterns = [
     path('api/series/<int:series_id>/posts/', SeriesPostView.as_view(), name='series-posts'),
     path('api/users/<int:pk>/block/', BlockView.as_view(), name='block'),
     path('api/posts/<int:pk>/pin/', PostPinView.as_view(), name='post-pin'),
+    path('feed/', LatestPostsFeed(), name='rss-feed'),
+    path('feed/<str:handle>/', AuthorPostsFeed(), name='author-rss-feed'),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
