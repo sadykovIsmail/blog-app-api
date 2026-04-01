@@ -21,7 +21,10 @@
       "Bash(GIT_AUTHOR_DATE=\"$D2\" GIT_COMMITTER_DATE=\"$D2\" git add app/author/tests/test_newsletter.py)",
       "Bash(GIT_AUTHOR_DATE=\"$D2\" GIT_COMMITTER_DATE=\"$D2\" git commit -m \"test: add failing TDD tests for newsletter subscriptions\")",
       "Bash(D2=\"2026-03-31T12:30:00\")",
-      "Bash(GIT_AUTHOR_DATE=\"$D2\" GIT_COMMITTER_DATE=\"$D2\" git commit -m \"feat: add newsletter subscriptions — Closes #72\")"
+      "Bash(GIT_AUTHOR_DATE=\"$D2\" GIT_COMMITTER_DATE=\"$D2\" git commit -m \"feat: add newsletter subscriptions — Closes #72\")",
+      "Bash(D3=\"2026-04-01T09:00:00\")",
+      "Bash(GIT_AUTHOR_DATE=\"$D3\" GIT_COMMITTER_DATE=\"$D3\" git add app/author/tests/test_api_versioning.py)",
+      "Bash(GIT_AUTHOR_DATE=\"$D3\" GIT_COMMITTER_DATE=\"$D3\" git commit -m \"test: add failing TDD tests for API v1 versioning\")"
     ]
   }
 }
