@@ -427,13 +427,31 @@ class BlogPostViews(viewsets.ModelViewSet):
         parser_classes=[MultiPartParser, FormParser],
     )
     def upload_image(self, request, pk=None):
+        import io
+        from PIL import Image as PILImage
+        from django.core.files.uploadedfile import InMemoryUploadedFile
         post = self.get_object()
+        image_file = request.FILES.get('image')
+        if image_file:
+            img = PILImage.open(image_file)
+            max_width = 1200
+            if img.width > max_width:
+                ratio = max_width / img.width
+                new_size = (max_width, int(img.height * ratio))
+                img = img.resize(new_size, PILImage.LANCZOS)
+            buf = io.BytesIO()
+            img_format = img.format or 'JPEG'
+            img.save(buf, format=img_format)
+            buf.seek(0)
+            optimized = InMemoryUploadedFile(
+                buf, 'image', image_file.name, image_file.content_type,
+                buf.getbuffer().nbytes, None,
+            )
+            request.FILES['image'] = optimized
         serializer = self.get_serializer(post, data=request.data)
-
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data, status=status.HTTP_200_OK)
-
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
